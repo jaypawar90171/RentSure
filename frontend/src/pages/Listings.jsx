@@ -7,87 +7,100 @@ import { Button } from "../components/ui/button";
 import { Input } from "../components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
 import { Search, Grid, List } from "lucide-react";
+import axios from "axios";
+// const rentalListings = [
+//   {
+//     id: 1,
+//     title: "Downtown Apartment",
+//     address: "123 Main St, Apt 4B, New York",
+//     price: 2500,
+//     bedrooms: 2,
+//     bathrooms: 1,
+//     sqft: 850,
+//     securityDeposit: 3000,
+//     description: "Modern apartment in the heart of downtown with great amenities and easy access to public transportation.",
+//     featured: true,
+//   },
+//   {
+//     id: 2,
+//     title: "Suburban House",
+//     address: "456 Oak Lane, Austin",
+//     price: 3200,
+//     bedrooms: 3,
+//     bathrooms: 2.5,
+//     sqft: 1800,
+//     securityDeposit: 3000,
+//     description: "Spacious family home in a quiet neighborhood with a large backyard and modern appliances.",
+//     featured: false,
+//   },
+//   {
+//     id: 3,
+//     title: "Luxury Condo",
+//     address: "789 Skyline Ave, Unit 12, Miami",
+//     price: 4000,
+//     bedrooms: 2,
+//     bathrooms: 2,
+//     sqft: 1200,
+//     securityDeposit: 3000,
+//     description: "High-end condo with ocean views, pool access, and 24/7 security in a premium building.",
+//     featured: true,
+//   },
+//   {
+//     id: 4,
+//     title: "Cozy Studio",
+//     address: "101 College Blvd, Boston",
+//     price: 1800,
+//     bedrooms: 0,
+//     bathrooms: 1,
+//     sqft: 550,
+//     securityDeposit: 3000,
+//     description: "Perfect studio for students or young professionals, fully furnished with utilities included.",
+//     featured: false,
+//   },
+//   {
+//     id: 5,
+//     title: "Waterfront Townhouse",
+//     address: "222 Harbor View, Seattle",
+//     price: 3800,
+//     bedrooms: 3,
+//     bathrooms: 2,
+//     sqft: 1600,
+//     securityDeposit: 3000,
+//     description: "Beautiful townhouse with stunning water views, private deck, and modern finishes throughout.",
+//     featured: false,
+//   },
+//   {
+//     id: 6,
+//     title: "Garden Apartment",
+//     address: "333 Green St, Lower Level, Chicago",
+//     price: 1950,
+//     bedrooms: 1,
+//     bathrooms: 1,
+//     sqft: 750,
+//     securityDeposit: 3000,
+//     description: "Charming garden-level apartment with private entrance and access to shared backyard space.",
+//     featured: false,
+//   },
+// ];
 
-const rentalListings = [
-  {
-    id: 1,
-    title: "Downtown Apartment",
-    address: "123 Main St, Apt 4B, New York",
-    price: 2500,
-    bedrooms: 2,
-    bathrooms: 1,
-    sqft: 850,
-    securityDeposit: 3000,
-    description: "Modern apartment in the heart of downtown with great amenities and easy access to public transportation.",
-    featured: true,
-  },
-  {
-    id: 2,
-    title: "Suburban House",
-    address: "456 Oak Lane, Austin",
-    price: 3200,
-    bedrooms: 3,
-    bathrooms: 2.5,
-    sqft: 1800,
-    securityDeposit: 3000,
-    description: "Spacious family home in a quiet neighborhood with a large backyard and modern appliances.",
-    featured: false,
-  },
-  {
-    id: 3,
-    title: "Luxury Condo",
-    address: "789 Skyline Ave, Unit 12, Miami",
-    price: 4000,
-    bedrooms: 2,
-    bathrooms: 2,
-    sqft: 1200,
-    securityDeposit: 3000,
-    description: "High-end condo with ocean views, pool access, and 24/7 security in a premium building.",
-    featured: true,
-  },
-  {
-    id: 4,
-    title: "Cozy Studio",
-    address: "101 College Blvd, Boston",
-    price: 1800,
-    bedrooms: 0,
-    bathrooms: 1,
-    sqft: 550,
-    securityDeposit: 3000,
-    description: "Perfect studio for students or young professionals, fully furnished with utilities included.",
-    featured: false,
-  },
-  {
-    id: 5,
-    title: "Waterfront Townhouse",
-    address: "222 Harbor View, Seattle",
-    price: 3800,
-    bedrooms: 3,
-    bathrooms: 2,
-    sqft: 1600,
-    securityDeposit: 3000,
-    description: "Beautiful townhouse with stunning water views, private deck, and modern finishes throughout.",
-    featured: false,
-  },
-  {
-    id: 6,
-    title: "Garden Apartment",
-    address: "333 Green St, Lower Level, Chicago",
-    price: 1950,
-    bedrooms: 1,
-    bathrooms: 1,
-    sqft: 750,
-    securityDeposit: 3000,
-    description: "Charming garden-level apartment with private entrance and access to shared backyard space.",
-    featured: false,
-  },
-];
+
+
 
 function Listings() {
+  const [properties , setProperties] = useState([]);
+  // rentalListings = useState({});
+
+axios.get("http://localhost:5000/api/properties")
+.then((response) => {
+  setProperties(response.data)
+})
+.catch((error) => { console.error("There was an error!", error); })
+
+
   const [searchTerm, setSearchTerm] = useState("");
   const [viewMode, setViewMode] = useState("grid");
 
-  const filteredListings = rentalListings.filter(
+  const filteredListings = properties.filter(
     (listing) =>
       listing.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
       listing.address.toLowerCase().includes(searchTerm.toLowerCase())
@@ -165,7 +178,7 @@ function ListingCard({ listing }) {
       {/* Image Section */}
       <div className="relative h-48 bg-gray-200">
         <img
-          src="" // Keep the src URL blank as per the requirement
+          src={`https://gateway.pinata.cloud/ipfs/QmQoNQCDxzE8BNSiC8GJDpz93Z3CQW7Q2njmK9159fsk6v`}  // Keep the src URL blank as per the requirement
           alt={listing.title}
           className="w-full h-full object-cover"
         />

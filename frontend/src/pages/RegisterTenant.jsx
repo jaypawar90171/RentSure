@@ -4,6 +4,7 @@ import {Button} from "../components/ui/button";
 import {Input} from "../components/ui/input";
 import {Label} from "../components/ui/label";
 import { useNavigate } from "react-router-dom";
+import axios from "axios";
 
 export default function RegisterTenant() {
   const Navigate = useNavigate();
@@ -25,7 +26,29 @@ export default function RegisterTenant() {
         e.preventDefault()
         // Handle form submission logic here
         console.log(formData)
-        Navigate('/tenant')
+
+        const userInfo = JSON.parse(localStorage.getItem("user-info") );
+
+        const data = {
+          "email" : userInfo.email,
+          "name" : formData.name,
+          "phone" : formData.mobile, 
+          "upiDetails" :  {
+            upiId : formData.upiId,
+            name : formData.name
+          }
+        }
+        console.log(userInfo.email)
+        axios.post("http://localhost:5000/api/tenants", data)
+        .then((response) => {
+          localStorage.setItem("userId", JSON.stringify(response.data._id))
+          console.log(response.data);
+          Navigate('/tenant')
+        })
+        .catch((error) => {
+          console.error("There was an error!", error);
+        });
+        // Navigate('/tenant')
     }
 
 
@@ -35,7 +58,7 @@ export default function RegisterTenant() {
     <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4">
       <Card className="w-full max-w-md">
         <CardHeader className="text-center">
-          <CardTitle className="text-2xl font-bold">Welcome Landlord</CardTitle>
+          <CardTitle className="text-2xl font-bold">Welcome Tenant</CardTitle>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleSubmit} className="space-y-4">

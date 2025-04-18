@@ -9,18 +9,18 @@ import { useNavigate } from "react-router-dom";
 
 const Landing = () => {
   const [userInfo, setUserInfo] = useState(null);
-    const navigate = useNavigate();
+  const navigate = useNavigate();
 
-    useEffect(()=>{
-        const data = localStorage.getItem('user-info');
-        const userData = JSON.parse(data);
-        setUserInfo(userData);
-    },[])
+  useEffect(() => {
+    const data = localStorage.getItem("user-info");
+    const userData = JSON.parse(data);
+    setUserInfo(userData);
+  }, []);
 
-    const handleLogout = ()=>{
-        localStorage.removeItem('user-info');
-        navigate('/login');
-  }
+  const handleLogout = () => {
+    localStorage.removeItem("user-info");
+    navigate("/login");
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
