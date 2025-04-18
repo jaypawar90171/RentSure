@@ -5,7 +5,7 @@ import { useGoogleLogin } from "@react-oauth/google"
 import { useNavigate } from "react-router-dom"
 import { googleAuth } from "../api"
 import { Button } from "../components/ui/button"
-// import axios from 'axios';
+import axios from 'axios';
 const Login = () => {
   const navigate = useNavigate()
 
@@ -31,23 +31,26 @@ const Login = () => {
 
         // Navigate to home after successful login
 
-        // axios.post("http://localhost:5000/haveAccount", { email : email })
-        // .then((response) => {
-        //   console.log(response.data);
-        //   if (response.data.haveAccount) {
-        //     if(response.data.user.role === "landlord") { 
-        //       navigate("/landlord")
-        //     }else{
-        //       navigate("/tenant")
-        //     }
-        //   } else {
-        //     navigate("/roleCard")
-        //   }
-        // })
-        // .catch((error) => {
-        //   console.error("There was an error!", error);
-        // });
-        navigate("/roleCard")
+        axios.post("http://localhost:5000/api/haveAccount", { email : email })
+        .then((response) => {
+          console.log(response.data);
+          if (response.data.haveAccount) {
+            localStorage.setItem("userId", JSON.stringify(response.data.user[0].userId))
+            if(response.data.user.role === "landlord") { 
+              navigate("/landlord")
+            }else{
+              navigate("/tenant")
+            }
+
+            console.log(response.data.user[0].userId)
+          } else {
+            navigate("/roleCard")
+          }
+        })
+        .catch((error) => {
+          console.error("There was an error!", error);
+        });
+        // navigate("/roleCard")
       }
     } catch (err) {
       console.log(err)

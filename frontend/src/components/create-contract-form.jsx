@@ -1,22 +1,47 @@
 import { Button } from "../components/ui/button";
-import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "../components/ui/card";
-import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from "../components/ui/form";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardFooter,
+  CardHeader,
+  CardTitle,
+} from "../components/ui/card";
+import {
+  Form,
+  FormControl,
+  FormDescription,
+  FormField,
+  FormItem,
+  FormLabel,
+  FormMessage,
+} from "../components/ui/form";
 import { Input } from "../components/ui/input";
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "../components/ui/select";
 import { Textarea } from "../components/ui/textarea";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { CalendarIcon } from "lucide-react";
 import { useForm } from "react-hook-form";
 import { z } from "zod";
-import { Popover, PopoverContent, PopoverTrigger } from "../components/ui/popover";
+import {
+  Popover,
+  PopoverContent,
+  PopoverTrigger,
+} from "../components/ui/popover";
 import { format } from "date-fns";
 import { Calendar } from "../components/ui/calendar";
 import { cn } from "../lib/utils";
 import { useState } from "react";
 import { toast } from "sonner";
 import { useNavigate } from "react-router-dom";
-import FormData from 'form-data';
-import axios from 'axios';
+import FormData from "form-data";
+import axios from "axios";
 
 const formSchema = z.object({
   propertyName: z.string().min(3, {
@@ -75,55 +100,73 @@ export function CreateContractForm() {
   });
 
   const handleFile = async (fileToHandle) => {
-        
-        console.log('starting')
-    
-        // initialize the form data
-        const formData = new FormData()
-    
-        // append the file form data to 
-        formData.append("file", fileToHandle)
-    
-        // call the keys from .env
-    
-        const API_KEY = '20c50cb9f72f9844cdd7'
-        const API_SECRET = '996eebb7c188e46323c78ad75922d17d636350bf37c33e3fbff1bd350f3a9a37'
-    
-        // the endpoint needed to upload the file
-        const url =  `https://api.pinata.cloud/pinning/pinFileToIPFS`
-        const JWT = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJhOGQ3NTMxNy0wMjQwLTQxNTMtYTZhZS0zYWQxNTc4Y2U0N2QiLCJlbWFpbCI6ImFwZzExMTMzMUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJGUkExIn0seyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJOWUMxIn1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiMjBjNTBjYjlmNzJmOTg0NGNkZDciLCJzY29wZWRLZXlTZWNyZXQiOiI5OTZlZWJiN2MxODhlNDYzMjNjNzhhZDc1OTIyZDE3ZDYzNjM1MGJmMzdjMzNlM2ZiZmYxYmQzNTBmM2E5YTM3IiwiZXhwIjoxNzYxMTQxMTk1fQ.9beZK2zfysefAZBKJFUqjB1AxRPAh87eNHJHDjwsGfc`
-        const response = await axios.post(
-          url,
-          formData,
-          {
-              maxContentLength: "Infinity",
-              headers: {
-                  Authorization: `Bearer ${JWT}`,
-                  "Content-Type": `multipart/form-data;boundary=${formData._boundary}`, 
-                  'pinata_api_key': API_KEY,
-                  'pinata_secret_api_key': API_SECRET
-    
-              }
-          }
-      )
-    
-      console.log(response)
-    
-      // get the hash
-      const ipfsUrl = (response.data.IpfsHash)
-      console.log("https://gateway.pinata.cloud/ipfs/" + ipfsUrl)
-      setIPFSHASH(ipfsUrl)
-    }
-  
+    console.log("starting");
+
+    // initialize the form data
+    const formData = new FormData();
+
+    // append the file form data to
+    formData.append("file", fileToHandle);
+
+    // call the keys from .env
+
+    const API_KEY = "20c50cb9f72f9844cdd7";
+    const API_SECRET =
+      "996eebb7c188e46323c78ad75922d17d636350bf37c33e3fbff1bd350f3a9a37";
+
+    // the endpoint needed to upload the file
+    const url = `https://api.pinata.cloud/pinning/pinFileToIPFS`;
+    const JWT = `eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VySW5mb3JtYXRpb24iOnsiaWQiOiJhOGQ3NTMxNy0wMjQwLTQxNTMtYTZhZS0zYWQxNTc4Y2U0N2QiLCJlbWFpbCI6ImFwZzExMTMzMUBnbWFpbC5jb20iLCJlbWFpbF92ZXJpZmllZCI6dHJ1ZSwicGluX3BvbGljeSI6eyJyZWdpb25zIjpbeyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJGUkExIn0seyJkZXNpcmVkUmVwbGljYXRpb25Db3VudCI6MSwiaWQiOiJOWUMxIn1dLCJ2ZXJzaW9uIjoxfSwibWZhX2VuYWJsZWQiOmZhbHNlLCJzdGF0dXMiOiJBQ1RJVkUifSwiYXV0aGVudGljYXRpb25UeXBlIjoic2NvcGVkS2V5Iiwic2NvcGVkS2V5S2V5IjoiMjBjNTBjYjlmNzJmOTg0NGNkZDciLCJzY29wZWRLZXlTZWNyZXQiOiI5OTZlZWJiN2MxODhlNDYzMjNjNzhhZDc1OTIyZDE3ZDYzNjM1MGJmMzdjMzNlM2ZiZmYxYmQzNTBmM2E5YTM3IiwiZXhwIjoxNzYxMTQxMTk1fQ.9beZK2zfysefAZBKJFUqjB1AxRPAh87eNHJHDjwsGfc`;
+    const response = await axios.post(url, formData, {
+      maxContentLength: "Infinity",
+      headers: {
+        Authorization: `Bearer ${JWT}`,
+        "Content-Type": `multipart/form-data;boundary=${formData._boundary}`,
+        pinata_api_key: API_KEY,
+        pinata_secret_api_key: API_SECRET,
+      },
+    });
+
+    console.log(response);
+
+    // get the hash
+    const ipfsUrl = response.data.IpfsHash;
+    console.log("https://gateway.pinata.cloud/ipfs/" + ipfsUrl);
+    setIPFSHASH(ipfsUrl);
+  };
 
   function onSubmit(values) {
     setIsCreating(true);
-
+    
     setTimeout(() => {
-      console.log(values);
+      const userId = JSON.parse(localStorage.getItem("userId"));
+      const data = {
+        name: "New Propert",
+        address: {
+          street: "line1",
+          city: "kolhapiur",
+          state: "maharastra",
+          zip: "416004",
+        },
+        propertyType: "residential",
+        propertyArea: 1000,
+        noOfRooms: 4,
+        landlord: userId,
+      };
+      
+      // axios
+      //   .post("http://localhost:5000/api/properties", data)
+      //   .then((response) => {
+      //     console.log(response.data);
+      //   })
+      //   .catch((error) => {
+      //     console.error("There was an error!", error);
+      //   });
+
+      console.log(userId);
       setIsCreating(false);
       toast.success("Contract created successfully!");
-      navigate("/landlord");
+      // navigate("/landlord");
     }, 2000);
   }
 
@@ -132,7 +175,8 @@ export function CreateContractForm() {
       <CardHeader>
         <CardTitle>Create New Rental Contract</CardTitle>
         <CardDescription>
-          Enter the details below to create a new smart contract for your rental property.
+          Enter the details below to create a new smart contract for your rental
+          property.
         </CardDescription>
       </CardHeader>
       <CardContent>
@@ -190,7 +234,10 @@ export function CreateContractForm() {
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel>State</FormLabel>
-                      <Select onValueChange={field.onChange} defaultValue={field.value}>
+                      <Select
+                        onValueChange={field.onChange}
+                        defaultValue={field.value}
+                      >
                         <FormControl>
                           <SelectTrigger>
                             <SelectValue placeholder="Select state" />
@@ -216,7 +263,7 @@ export function CreateContractForm() {
                   name="zip"
                   render={({ field }) => (
                     <FormItem>
-                      <FormLabel>ZIP Code</FormLabel>
+                      <FormLabel>ZIP Code</FormLabel> 
                       <FormControl>
                         <Input placeholder="ZIP" {...field} />
                       </FormControl>
@@ -237,10 +284,15 @@ export function CreateContractForm() {
                   <FormItem>
                     <FormLabel>Tenant Email</FormLabel>
                     <FormControl>
-                      <Input placeholder="tenant@example.com" type="email" {...field} />
+                      <Input
+                        placeholder="tenant@example.com"
+                        type="email"
+                        {...field}
+                      />
                     </FormControl>
                     <FormDescription>
-                      The tenant will receive an invitation to sign the contract.
+                      The tenant will receive an invitation to sign the
+                      contract.
                     </FormDescription>
                     <FormMessage />
                   </FormItem>
@@ -341,7 +393,12 @@ export function CreateContractForm() {
                     <FormItem>
                       <FormLabel>Property Area (Sq. Ft.)</FormLabel>
                       <FormControl>
-                        <Input placeholder="0" type="number" min="0" {...field} />
+                        <Input
+                          placeholder="0"
+                          type="number"
+                          min="0"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -354,14 +411,18 @@ export function CreateContractForm() {
                     <FormItem>
                       <FormLabel>No. of Rooms</FormLabel>
                       <FormControl>
-                        <Input placeholder="0" type="number" min="0" {...field} />
+                        <Input
+                          placeholder="0"
+                          type="number"
+                          min="0"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
                   )}
                 />
               </div>
-
 
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                 <FormField
@@ -371,7 +432,12 @@ export function CreateContractForm() {
                     <FormItem>
                       <FormLabel>Monthly Rent ($)</FormLabel>
                       <FormControl>
-                        <Input placeholder="0" type="number" min="0" {...field} />
+                        <Input
+                          placeholder="0"
+                          type="number"
+                          min="0"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -385,7 +451,12 @@ export function CreateContractForm() {
                     <FormItem>
                       <FormLabel>Security Deposit ($)</FormLabel>
                       <FormControl>
-                        <Input placeholder="0" type="number" min="0" {...field} />
+                        <Input
+                          placeholder="0"
+                          type="number"
+                          min="0"
+                          {...field}
+                        />
                       </FormControl>
                       <FormMessage />
                     </FormItem>
@@ -414,22 +485,38 @@ export function CreateContractForm() {
 
             <div className="space-y-4 pt-4 border-t">
               <h3 className="text-lg font-medium">File Upload</h3>
-              <input type="file" onChange={(event) => setFile(event.target.files[0])} />
+              <input
+                type="file"
+                onChange={(event) => setFile(event.target.files[0])}
+              />
               <Button onClick={() => handleFile(file)} disabled={isUploading}>
                 {isUploading ? "Uploading..." : "Pin"}
               </Button>
               {myipfsHash && (
-                <a href={`https://gateway.pinata.cloud/ipfs/${myipfsHash}`} target="_blank" rel="noopener noreferrer">
+                <a
+                  href={`https://gateway.pinata.cloud/ipfs/${myipfsHash}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
                   View Image
                 </a>
               )}
             </div>
 
             <CardFooter className="px-0 pt-4 border-t flex justify-end">
-              <Button type="button" variant="outline" className="mr-2" onClick={() => navigate("/landlord")}>
+              <Button
+                type="button"
+                variant="outline"
+                className="mr-2"
+                onClick={() => navigate("/landlord")}
+              >
                 Cancel
               </Button>
-              <Button type="submit" className="bg-rentsure-600 hover:bg-rentsure-700" disabled={isCreating}>
+              <Button
+                type="submit"
+                className="bg-rentsure-600 hover:bg-rentsure-700"
+                disabled={isCreating}
+              >
                 {isCreating ? "Creating..." : "Create Contract"}
               </Button>
             </CardFooter>
