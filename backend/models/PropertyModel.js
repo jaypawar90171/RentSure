@@ -38,6 +38,7 @@ const propertySchema = new mongoose.Schema({
       longitude: { type: Number, },
     },
     image: { type: String },
+    documentHash: { type: String },
   });
   
   const Property = mongoose.model("Property", propertySchema);

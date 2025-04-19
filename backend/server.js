@@ -12,11 +12,12 @@ import bodyParser from "body-parser";
 import Payment from "./models/PaymentModel.js";
 import User from "./models/UserModel.js";
 import Landlord from "./models/LandlordModel.js";
+import RentOut from "./models/RentOutModel.js";
+
 import Property from "./models/PropertyModel.js";
 import Tenant from "./models/TenantModel.js";
-
+import Signature from "./models/SingnatureModel.js";
 import contractABI from "./RentSure.json" assert { type: "json" };
-
 import path from "path";
 import { fileURLToPath } from "url";
 
@@ -165,8 +166,8 @@ app.post("/api/docs/create", async (req, res) => {
   }
 });
 
-app.get("/generate-hash", async (req, res) => {
-  console.log("Hello from hash generation endpoint");
+app.post("/generate-hash", async (req, res) => {
+  console.log("Hello from hash generation endpoint", req.body); // Log the request body for debugging
   try {
     const docs = google.docs({ version: "v1", auth });
     const fileId = req.body.documentId; // Replace with your Google Doc ID
@@ -188,6 +189,8 @@ app.get("/generate-hash", async (req, res) => {
     hash.update(content);
     const hexHash = hash.digest("hex");
     console.log("Hash generated:", hexHash);
+
+    Property.findByIdAndUpdate( req.body.propertyId , { documentHash: hexHash });
     res.json({ hash: hexHash });
   } catch (error) {
     res.status(500).json({ error: error.message });
@@ -198,6 +201,39 @@ app.get("", async (req, res) => {
   console.log("Hello");
   res.status(201).json("hello");
 });
+
+
+app.post("/api/rentOut", async (req, res) => {
+  try {
+    // res.status(200).json("Hello from RentOut endpoint");
+    const rentOut = new RentOut({
+      propertyId: req.body.propertyId,
+      tenantId: req.body.tenantId,
+      // landlordId: req.body.landlordId,
+    });
+    await rentOut.save();
+    res.status(201).json(rentOut);
+
+    Property.findByIdAndUpdate(
+      req.body.propertyId,
+      { isAvailable: false },
+     
+    );
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+ })
+
+
+ app.post("/api/getPropertyByTenant", async (req, res) => { 
+  try {
+    const property = await RentOut.find({ tenantId: req.body.tenantId })
+      .populate("propertyId");
+
+      res.status(200).json(property);
+  }catch (error) {  console.error("Error fetching property by tenant:", error);
+    res.status(500).json({ error: "Server error" });
+ } });
 
 app.post("/api/haveAccount", async (req, res) => {
   console.log("Hello", req.body);
@@ -242,8 +278,30 @@ app.post("/api/haveAccount", async (req, res) => {
 //   }
 //  });
 
-app.post("/api/orders", async (req, res) => {
+app.post("/api/payRent", async (req, res) => {
   const { amount, tenantId } = req.body;
+
+  try {
+    
+    const payment = new Payment({
+      propertyId : req.body.propertyId,
+      tenantId: req.body.tenantId,
+      amount: req.body.amount,
+      status: req.body.status,
+    });
+
+    console.log(payment)
+    await payment.save();
+    res.status(200).send({ message: "Payment successful" });
+  } catch (error) {
+    console.error("Error processing payment:", error);
+    res.status(500).send({ message: "Internal server error" });
+  }
+});
+
+
+app.post("/api/payDeposit", async (req, res) => {
+  // const { amount, tenantId } = req.body;
 
   try {
     
@@ -286,15 +344,16 @@ app.post("/api/landlords", async (req, res) => {
   }
 });
 
-app.get("/api/transactions" , async (req, res) =>{
-  console.log("Fetching transaction")
-  try {
-    const transactions = await Payment.find()
-    .sort({ createdAt: -1 });
-    res.json(transactions)
-  } catch (error) {
-    console.error("Error ")
+app.get("/api/transactions" , async (req , res) => { 
+  try{
+    const transactions = await Payment.find();
+    console.log("Transactions", transactions);
+  
+    res.json(transactions);
+  }catch (error) {
+    res.status(500).json({ error: "Server error" });
   }
+ 
 }) 
  
 // // Create Property for a Landlord
@@ -543,9 +602,9 @@ app.post("/api/agreement", async (req, res) => {
 // /**
 //  * 2. Verify Agreement Hash
 //  */
-app.get("/api/agreement/verify", async (req, res) => {
+app.post("/api/agreement/verify", async (req, res) => {
   try {
-    const { propertyId, documentHash } = req.query;
+    const { propertyId, documentHash } = req.body;
       const hash = ethers.keccak256(ethers.toUtf8Bytes(documentHash));
       
       const isVerified = await rentSureContract.verifyAgreement(propertyId, hash);
@@ -566,20 +625,24 @@ app.get("/api/agreement/verify", async (req, res) => {
 //  */
 app.post("/api/payment", async (req, res) => {
   try {
+    console.log("Payment on Blockchain" , req.body); // Log the request body for debugging
     const { propertyId, amount, tenantId } = req.body;
+    console.log("Property ID", propertyId);
+    console.log("Tenant ID", tenantId);
+    console.log("Amount", amount);
     const weiAmount = ethers.parseEther(amount.toString());
     
     const tx = await rentSureContract.recordPayment(propertyId, weiAmount, tenantId);
     const receipt = await tx.wait();
     
-    res.json({ 
+    res.status(200).json({ 
       success: true, 
       txHash: tx.hash,
       blockNumber: receipt.blockNumber
     });
     // res.json({ success: true, txHash: tx.hash });
   } catch (error) {
-    res.status(500).json({ error: error.message });
+    res.status(500).json({ err : error, error: error.message });
   }
 });
 
@@ -588,34 +651,62 @@ app.post("/api/payment", async (req, res) => {
 //  */
 app.post("/api/getPaymentsByProperty", async (req, res) => {
   try {
-    const { propertyId } = req.body.propertyId;
-    const paymentCount = await rentSureContract.getPaymentCount(propertyId);
-    const count = Number(paymentCount);
-    
-    // const payments = [];
-    // for (let i = 0; i < count; i++) {
-    //   const payment = await rentSureContract.getPaymentDetails(propertyId, i);
-    //   payments.push({
-    //     amount: ethers.formatEther(payment.amount),
-    //     timestamp: new Date(Number(payment.timestamp) * 1000),
-    //     payer: payment.payer,
-    //     reference: payment.paymentReference
-    //   });
-    // }
-    // const count = 10;
-    res.json({ 
-      propertyId,
-      // payments,
-      count
-    });
-    
-
    
+    console.log("Property ID", req.body.propertyId);
+    const payments = await rentSureContract.getPaymentDetails(req.body.propertyId);
+  
+    console.log("Payments", payments);
+
+    const parsedPayments = payments.map(p => ({
+      amount: p.amount.toString(),   // convert BigInt to string
+      tenantId: p.tenantId
+    }));
+
+    // res.json(parsedPayments);
+   
+    res.status(200).json(parsedPayments);
   } catch (error) {
     console.error( "Error while fetching payments ", error)
     res.status(500).json({ error: error.message });
   }
 });
+
+
+
+
+
+app.post('/api/signatures',(req, res) => {
+  // const {  userId, signatureImage   } = { userId : req.body.userId, signatureImage : req.body.signatureImage};
+  // console.log("Signature data", req.body); // Log the request body for debugging
+  // console.log("Signature data", userId, signatureImage); // Log the request body for debugging
+  if (!req.body.userId || !req.body.signatureImage) {
+    const { userId, signatureImage } = req.body;
+    console.log("Signature data", userId, signatureImage); // Log the request body for debugging
+    return res.status(400).json({ error: 'User ID and signature image are required' });
+    // return res.status(400).json({ error: 'Signature data is required' });
+  }
+  const newSignature = new Signature({ userId : req.body.userId , signatureImage : req.body.signatureImage });
+  newSignature.save()
+    .then(() => res.status(201).json(newSignature))
+    .catch((error) => res.status(500).json({ error: 'Server error', details: error.message }));
+
+});
+
+app.get('/api/signatures', (req, res) => {
+  Signature.find()
+    .sort({ createdAt: -1 })
+    .then((signatures) => res.json(signatures))
+    .catch((error) => res.status(500).json({ error: 'Server error', details: error.message }));
+});
+
+
+
+
+
+
+
+
+
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log("Server running on port 5000"));

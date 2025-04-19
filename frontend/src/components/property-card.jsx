@@ -85,6 +85,7 @@ export function PropertyCard({ property }) {
 // Define PropTypes for the component
 PropertyCard.propTypes = {
   property: PropTypes.shape({
+    _id: PropTypes.string.isRequired,
     name: PropTypes.string,
     id: PropTypes.string.isRequired,
     address: PropTypes.shape({

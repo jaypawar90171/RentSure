@@ -10,10 +10,13 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { toast } from "../components/ui/sonner";
 import { useLocation } from "react-router-dom";
+import GooglePayButton from '@google-pay/button-react';
+import axios from "axios";
+
 const PropertyDetail = () => {
   const { id } = useParams();
   const [isSigning, setIsSigning] = useState(false);
-
+  const [googlePayButton, setGooglePayButton] = useState(false);
   const { state } = useLocation(); // Access the passed state
   const property = state?.property;
 
@@ -30,17 +33,21 @@ const PropertyDetail = () => {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
   };
 
+  const handleSignContract = () => {
+    setGooglePayButton(true); };
+
   
 
 
-  const handleSignContract = () => {
-    console.log(property.landlord.upiDetails.name)
-    setIsSigning(true);
-    setTimeout(() => {
-      setIsSigning(false);
-      toast.success("Contract signed successfully!");
-    }, 2000);
-  };
+  // const handleSignContract = () => {
+  //   console.log(property.landlord.upiDetails.name)
+  //   setIsSigning(true);
+  //   setTimeout(() => {
+  //     setIsSigning(false);
+  //     toast.success("Contract signed successfully!");
+  //   }, 2000);
+  // };
+  
 
   const statusColors = {
     draft: "bg-gray-200 text-gray-800",
@@ -120,7 +127,7 @@ const PropertyDetail = () => {
                   <div className="text-sm space-y-1">
                     <div>
                       <span className="text-gray-500">Landlord:</span>{" "}
-                      <span className="font-medium">{property.landlord.upiDetails.name}</span>
+                      {/* <span className="font-medium">{property.landlord..name}</span> */}
                     </div>
                     {/* {contract.parties.tenant && (
                       <div>
@@ -155,7 +162,81 @@ const PropertyDetail = () => {
                       Sign Contract
                     </>
                   )}
+
+
                 </Button>
+                {googlePayButton && ( 
+                <GooglePayButton
+            environment="TEST"
+            buttonSizeMode="fill"
+            buttonColor="black"
+            buttonType="pay"
+            buttonLocale="en"
+            paymentRequest={{
+              apiVersion: 2,
+              apiVersionMinor: 0,
+              allowedPaymentMethods: [
+                {
+                  type: 'CARD',
+                  parameters: {
+                    allowedAuthMethods: ['PAN_ONLY', 'CRYPTOGRAM_3DS'],
+                    allowedCardNetworks: ['MASTERCARD', 'VISA'],
+                  },
+                  tokenizationSpecification: {
+                    type: 'PAYMENT_GATEWAY',
+                    parameters: {
+                      gateway: 'example',
+                      gatewayMerchantId: 'exampleGatewayMerchantId',
+                    },
+                  },
+                },
+              ],
+              merchantInfo: {
+                merchantId: 'BCR2DN7T5CCLJ3QZ',
+                merchantName: 'Dream Developers',
+              },
+              transactionInfo: {
+                totalPriceStatus: 'FINAL',
+                totalPriceLabel: 'Total',
+                totalPrice: String(property.depositAmount),
+                currencyCode: 'INR',
+                countryCode: 'IN',
+              },
+            }}
+            onLoadPaymentData={paymentRequest => {
+              console.log('load payment data', paymentRequest);
+
+              // const amount = property.rentAmount;
+              // Prepare the request body
+              console.log('Property ID:', property.landlord);
+              const userId = JSON.parse(localStorage.getItem('userId'));
+              const requestBody = {
+                propertyId: property._id,
+                amount: String(property.depositAmount),
+                tenantId: userId, 
+                status: 'paid',
+              };
+
+              // Send the payment data to the server
+              axios.post('http://localhost:5000/api/payDeposit', requestBody)
+              .then(response => {
+                
+                // axios.post('http://localhost:5000/api/payment', {propertyId : property._id , amount : property.rentAmount , tenantId : userId} )
+                // .then(res => { console.log(' Successfully saved to Blockchain', res.data); })  
+                // .catch(err => { console.error('Error saving to Blockchain', err); });
+
+                axios.post('http://localhost:5000/api/rentOut', {propertyId : property._id , tenantId : userId , landlordId : "abc"} )
+                .then(res => { console.log('Rented Out Successful with security deposit', res.data); })
+                .catch(err => { console.error('Error in renting out', err); });
+                console.log('Order processed successfully', response.data);
+
+              })
+              .catch(error => { console.error('Error processing order', error);});
+
+             
+            }}
+
+            />)}
               </div>
             )}
           </div>
@@ -182,7 +263,7 @@ const PropertyDetail = () => {
                 <CardContent className="prose max-w-none">
                   <h3>1. Parties</h3>
                   <p>
-                    This Residential Lease Agreement ("Agreement") is made between {property.landlord.name} ("Landlord")
+                    {/* This Residential Lease Agreement ("Agreement") is made between {property.landlord.name} ("Landlord") */}
                     {/* {property.parties.tenant ? ` and ${contract.parties.tenant} ("Tenant")` : ""}. */}
                   </p>
 

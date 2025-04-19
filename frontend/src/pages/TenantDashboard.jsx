@@ -24,29 +24,33 @@ const TenantDashboard = () => {
 
  useEffect(() => { 
      console.log("Fetching properties...");
-     const fetchProperties = async () => {
+     const fetchProperty = async () => {
        try {
-         const response = await axios.get("http://localhost:5000/api/properties");
+          await axios.post("http://localhost:5000/api/getPropertyByTenantId" , {tenantId : JSON.parse(localStorage.getItem('userId'))})
+          .then((response) => {
+            setProperty(response.data);
+            console.log(response.data[0]);})
+            .catch((error) => console.error('Error' , error));
         //  setProperties(response.data);
-        const data = {
-          _id : response.data[0]._id,
-          name: response.data[0].name,
-          address: response.data[0].address,
-          propertyType: response.data[0].propertyType,
-          propertyArea: response.data[0].propertyArea,
-          noOfRooms: response.data[0].noOfRooms,
-          landlord: response.data[0].landlord,
-          startDate: response.data[0].startDate,
-          endDate: response.data[0].endDate,
-          rentAmount: response.data[0].rentAmount,
-          depositAmount: response.data[0].depositAmount,
-          image: response.data[0].image,
-          location : response.data[0].location,
-        }
-        console.log(data);
+        // const data = {
+        //   _id : response.data[0]._id,
+        //   name: response.data[0].name,
+        //   address: response.data[0].address,
+        //   propertyType: response.data[0].propertyType,
+        //   propertyArea: response.data[0].propertyArea,
+        //   noOfRooms: response.data[0].noOfRooms,
+        //   landlord: response.data[0].landlord,
+        //   startDate: response.data[0].startDate,
+        //   endDate: response.data[0].endDate,
+        //   rentAmount: response.data[0].rentAmount,
+        //   depositAmount: response.data[0].depositAmount,
+        //   image: response.data[0].image,
+        //   location : response.data[0].location,
+        // }
+        // console.log(data);
         // setProperty(data);
-         console.log(response.data[0]);
-         setProperty(response.data[0]);
+        //  console.log(response.data[0]);
+        
          // Calculate due dates
         const calculatedDueDates = calculateDueDates(property.startDate, property.endDate);
         setDueDates(calculatedDueDates);
@@ -76,7 +80,7 @@ const TenantDashboard = () => {
     };
 
 
-     fetchProperties();
+     fetchProperty();
      fetchTransactions();
    } , []);
 
@@ -225,12 +229,12 @@ const TenantDashboard = () => {
               };
 
               // Send the payment data to the server
-              axios.post('http://localhost:5000/api/orders', requestBody)
+              axios.post('http://localhost:5000/api/payRent', requestBody)
               .then(response => {
 
-                // axios.post('http://localhost:5000/api/payments', {propertyId : property.id , amount : property.rentAmount , tenantId : userId} )
-                // .then(res => { console.log(' Successfully saved to Blockchain', res.data); })  
-                // .catch(err => { console.error('Error saving to Blockchain', err); });
+                axios.post('http://localhost:5000/api/payment', {propertyId : property._id , amount : property.rentAmount , tenantId : userId} )
+                .then(res => { console.log(' Successfully saved to Blockchain', res.data); })  
+                .catch(err => { console.error('Error saving to Blockchain', err); });
                 console.log('Order processed successfully', response.data);
 
               })

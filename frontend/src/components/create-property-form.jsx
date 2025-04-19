@@ -163,7 +163,7 @@ export function CreatePropertyForm() {
  
   };
 
-  function onSubmit(data) {
+  function onSubmit() {
     console.log("Form submitted");
     setIsCreating(true);
 
@@ -196,15 +196,13 @@ export function CreatePropertyForm() {
           console.log(res.data);
 
 
-
-
-          axios.post("http://localhost:3000/api/docs/create", data)
+          axios.post("http://localhost:5000/api/docs/create", data)
            
             .then((result) => {
-              console.log("📄 Document created:", result.documentId);
+              console.log("📄 Document created:", result.data.documentId);
               toast.success("Contract created successfully!");
 
-              axios.post("http://localhost:5000/generate-hash", result.documentId)
+              axios.post("http://localhost:5000/generate-hash", { documentId : result.data.documentId , propertyId : res.data._id})
                 .then((response) => { console.log(response.data); 
 
                   axios.post("http://localhost:5000/api/agreement" , {propertyId : res.data._id, documentHash : response.data.documentHash})
@@ -216,7 +214,6 @@ export function CreatePropertyForm() {
 
 
 
-              // ✅ Go back to landlord dashboard
             })
             .catch((err) => {
               console.error("Error creating contract:", err);
@@ -235,27 +232,6 @@ export function CreatePropertyForm() {
       toast.success("Contract created successfully!");
       // navigate("/landlord");
     }, 2000);
-
-
-    fetch("http://localhost:5000/api/docs/create", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(data),
-    })
-      .then((res) => res.json())
-      .then((result) => {
-        console.log("📄 Document created:", result.documentId);
-        toast.success("Contract created successfully!");
-        navigate("/landlord"); // ✅ Go back to landlord dashboard
-      })
-      .catch((err) => {
-        console.error("Error creating contract:", err);
-        toast.error("Failed to create document");
-      })
-      .finally(() => {
-        setIsCreating(false);
-      });
-
 
   
   }

@@ -110,7 +110,7 @@ router.post("/create", async (req, res) => {
         ],
       },
     });
-
+    
     res.status(200).json({
       message: "Document created successfully",
       documentId,

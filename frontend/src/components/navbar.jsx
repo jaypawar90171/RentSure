@@ -44,8 +44,8 @@ export function Navbar() {
             <Link to="/tenant" className="text-gray-600 hover:text-rentsure-600 transition-colors">
               Tenant
             </Link>
-            <Link to="/contracts" className="text-gray-600 hover:text-rentsure-600 transition-colors">
-              Contracts
+            <Link to="/properties" className="text-gray-600 hover:text-rentsure-600 transition-colors">
+              Properties
             </Link>
           </div>
           <div className="flex space-x-2">
