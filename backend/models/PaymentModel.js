@@ -2,16 +2,16 @@ import mongoose from 'mongoose';
 const PaymentSchema = new mongoose.Schema({
     amount: {
         type: Number,
-        required: true,
+        // required: true,
     },
     propertyId : {
         type: String,
-        required: true,
+        // required : true
     },
     tenantId: {
         type: String,
         // ref: 'Tenant',
-        required: true,
+        // required: true,
     },
     status: {
         type: String,

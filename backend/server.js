@@ -246,12 +246,15 @@ app.post("/api/orders", async (req, res) => {
   const { amount, tenantId } = req.body;
 
   try {
+    
     const payment = new Payment({
-      propertyId: req.body.propertyId,
+      propertyId : req.body.propertyId,
       tenantId: req.body.tenantId,
       amount: req.body.amount,
       status: req.body.status,
     });
+
+    console.log(payment)
     await payment.save();
     res.status(200).send({ message: "Payment successful" });
   } catch (error) {
@@ -283,6 +286,17 @@ app.post("/api/landlords", async (req, res) => {
   }
 });
 
+app.get("/api/transactions" , async (req, res) =>{
+  console.log("Fetching transaction")
+  try {
+    const transactions = await Payment.find()
+    .sort({ createdAt: -1 });
+    res.json(transactions)
+  } catch (error) {
+    console.error("Error ")
+  }
+}) 
+ 
 // // Create Property for a Landlord
 app.post("/api/properties", async (req, res) => {
   try {
@@ -334,6 +348,17 @@ app.get("/api/properties", async (req, res) => {
     const properties = await Property.find()
       .populate("landlord", "email upiDetails")
       .sort({ createdAt: -1 });
+    res.json(properties);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+app.post("/api/propertiesByLandlord", async (req, res) => {
+  try {
+   
+    const properties = await Property.find({landlord : req.body.landlord});
+ 
     res.json(properties);
   } catch (error) {
     res.status(500).json({ error: "Server error" });
@@ -518,68 +543,79 @@ app.post("/api/agreement", async (req, res) => {
 // /**
 //  * 2. Verify Agreement Hash
 //  */
-// app.get("/api/agreement/verify", async (req, res) => {
-//   try {
-//     const { propertyId, documentHash } = req.query;
-
-//     const isVerified = await rentSureContract.verifyAgreement(
-//       propertyId,
-//       ethers.keccak256(ethers.toUtf8Bytes(documentHash))
-//     );
-
-//     res.json({ verified: isVerified });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
+app.get("/api/agreement/verify", async (req, res) => {
+  try {
+    const { propertyId, documentHash } = req.query;
+      const hash = ethers.keccak256(ethers.toUtf8Bytes(documentHash));
+      
+      const isVerified = await rentSureContract.verifyAgreement(propertyId, hash);
+      console.log("isVerified", isVerified);
+      res.json({ 
+        verified: Boolean(isVerified),
+        propertyId,
+        documentHash: hash
+      });
+  } catch (error) {
+    console.error("Error verifying agreement:", error);
+    res.status(500).json({ error: error.message });
+  }
+});
 
 // /**
 //  * 3. Record Payment (Only Server can call)
 //  */
 app.post("/api/payment", async (req, res) => {
   try {
-    console.log(req.body);
-    const  data = { propertyId : req.body.propertyId, amount : req.body.amount, tenantId : req.body.tenantId, reference : '' } ;
-
-    const tx = await rentSureContract.recordPayment(
-      req.body.propertyId,
-      // ethers.parseEther(amount.toString()),
-      req.body.amount,
-      req.body.tenantId,
-      '',
-    );
-
-    await tx.wait();
-    res.json({ success: true, txHash: tx.hash });
+    const { propertyId, amount, tenantId } = req.body;
+    const weiAmount = ethers.parseEther(amount.toString());
+    
+    const tx = await rentSureContract.recordPayment(propertyId, weiAmount, tenantId);
+    const receipt = await tx.wait();
+    
+    res.json({ 
+      success: true, 
+      txHash: tx.hash,
+      blockNumber: receipt.blockNumber
+    });
+    // res.json({ success: true, txHash: tx.hash });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-// /**
+// /**te
 //  * 4. Get Payment History
 //  */
-// app.get("/api/payment/:propertyId", async (req, res) => {
-//   try {
-//     const propertyId = req.params.propertyId;
-//     const paymentCount = await rentSureContract.getPaymentCount(propertyId);
+app.post("/api/getPaymentsByProperty", async (req, res) => {
+  try {
+    const { propertyId } = req.body.propertyId;
+    const paymentCount = await rentSureContract.getPaymentCount(propertyId);
+    const count = Number(paymentCount);
+    
+    // const payments = [];
+    // for (let i = 0; i < count; i++) {
+    //   const payment = await rentSureContract.getPaymentDetails(propertyId, i);
+    //   payments.push({
+    //     amount: ethers.formatEther(payment.amount),
+    //     timestamp: new Date(Number(payment.timestamp) * 1000),
+    //     payer: payment.payer,
+    //     reference: payment.paymentReference
+    //   });
+    // }
+    // const count = 10;
+    res.json({ 
+      propertyId,
+      // payments,
+      count
+    });
+    
 
-//     const payments = [];
-//     for (let i = 0; i < paymentCount; i++) {
-//       const payment = await rentSureContract.getPaymentDetails(propertyId, i);
-//       payments.push({
-//         amount: ethers.formatEther(payment.amount),
-//         timestamp: new Date(payment.timestamp * 1000),
-//         payer: payment.payer,
-//         reference: payment.paymentReference,
-//       });
-//     }
-
-//     res.json({ payments });
-//   } catch (error) {
-//     res.status(500).json({ error: error.message });
-//   }
-// });
+   
+  } catch (error) {
+    console.error( "Error while fetching payments ", error)
+    res.status(500).json({ error: error.message });
+  }
+});
 
 const PORT = process.env.PORT || 5000;
 app.listen(PORT, () => console.log("Server running on port 5000"));

@@ -5,45 +5,21 @@ import { Footer } from "../components/footer";
 import { Button } from "../components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs";
-import { WalletConnect } from "../components/wallet-connect";
 import { ArrowLeft, Calendar, Check, CheckCircle2, Clock, DollarSign, FileCheck, FileText, History, Home, Users } from "lucide-react";
 import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { toast } from "../components/ui/sonner";
-
+import { useLocation } from "react-router-dom";
 const PropertyDetail = () => {
   const { id } = useParams();
   const [isSigning, setIsSigning] = useState(false);
 
-  const mockContracts = {
-    c1: {
-      id: "c1",
-      title: "Downtown Apartment",
-      address: "123 Main St, Apt 4B, New York, NY",
-      startDate: "2024-01-01",
-      endDate: "2024-12-31",
-      monthlyRent: 1250,
-      status: "active",
-      parties: {
-        landlord: "ABC Properties",
-        tenant: "John Smith",
-      },
-    },
-    c3: {
-      id: "c3",
-      title: "Luxury Condo",
-      address: "789 Park Ave, San Francisco, CA",
-      startDate: "2024-05-01",
-      endDate: "2025-04-30",
-      monthlyRent: 2200,
-      status: "pending",
-      parties: {
-        landlord: "ABC Properties",
-      },
-    },
-  };
+  const { state } = useLocation(); // Access the passed state
+  const property = state?.property;
 
-  const contract = mockContracts[id || ""] || mockContracts.c1;
+  if (!property) {
+    return <div className="text-center py-12">No property data available.</div>;
+  }
 
   const formatDate = (dateString) => {
     const options = { year: "numeric", month: "long", day: "numeric" };
@@ -54,7 +30,11 @@ const PropertyDetail = () => {
     return new Intl.NumberFormat("en-US", { style: "currency", currency: "USD" }).format(amount);
   };
 
+  
+
+
   const handleSignContract = () => {
+    console.log(property.landlord.upiDetails.name)
     setIsSigning(true);
     setTimeout(() => {
       setIsSigning(false);
@@ -75,27 +55,31 @@ const PropertyDetail = () => {
       <main className="flex-grow bg-gray-50 py-8">
         <div className="container mx-auto px-6">
           <div className="flex items-center mb-6">
-            <Link to="/contracts">
+            <Link to="/properties">
               <Button variant="ghost" className="mr-2">
                 <ArrowLeft className="mr-2 h-4 w-4" />
                 Back to Contracts
               </Button>
             </Link>
-            <WalletConnect />
+            
           </div>
 
           <div className="bg-white rounded-lg border shadow-sm p-6 mb-6">
             <div className="flex items-start justify-between mb-4">
               <div>
-                <h1 className="text-2xl font-bold text-gray-900">{contract.title}</h1>
+                <h1 className="text-2xl font-bold text-gray-900">{property.name}</h1>
                 <div className="flex items-center mt-1">
                   <Home className="h-4 w-4 text-gray-500 mr-2" />
-                  <span className="text-gray-700">{contract.address}</span>
+                  <span className="text-gray-700">
+                    {property.address.street}, {property.address.city}, {property.address.state}, {property.address.zipcode}
+                  </span>
                 </div>
               </div>
-              <Badge className={statusColors[contract.status]}>
-                {contract.status.charAt(0).toUpperCase() + contract.status.slice(1)}
+              <Badge className={statusColors[property.isAvailable ? "active" : "draft"]}>
+                {property.isAvailable ? "Available" : "Not Available"}
+
               </Badge>
+
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
@@ -108,7 +92,7 @@ const PropertyDetail = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="font-medium">
-                    {formatDate(contract.startDate)} - {formatDate(contract.endDate)}
+                    {formatDate(property.startDate)} - {formatDate(property.endDate)}
                   </div>
                 </CardContent>
               </Card>
@@ -121,7 +105,7 @@ const PropertyDetail = () => {
                   </CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <div className="font-medium">{formatCurrency(contract.monthlyRent)}</div>
+                  <div className="font-medium">{formatCurrency(property.rentAmount)}</div>
                 </CardContent>
               </Card>
 
@@ -136,20 +120,20 @@ const PropertyDetail = () => {
                   <div className="text-sm space-y-1">
                     <div>
                       <span className="text-gray-500">Landlord:</span>{" "}
-                      <span className="font-medium">{contract.parties.landlord}</span>
+                      <span className="font-medium">{property.landlord.upiDetails.name}</span>
                     </div>
-                    {contract.parties.tenant && (
+                    {/* {contract.parties.tenant && (
                       <div>
                         <span className="text-gray-500">Tenant:</span>{" "}
                         <span className="font-medium">{contract.parties.tenant}</span>
                       </div>
-                    )}
+                    )} */}
                   </div>
                 </CardContent>
               </Card>
             </div>
 
-            {contract.status === "pending" && (
+            {property.isAvailable === true && (
               <div className="mt-6 p-4 bg-yellow-50 border border-yellow-200 rounded-md flex items-center justify-between">
                 <div className="flex items-center">
                   <Clock className="h-5 w-5 text-yellow-600 mr-3" />
@@ -186,8 +170,9 @@ const PropertyDetail = () => {
                 <History className="h-4 w-4 mr-2" />
                 Transaction History
               </TabsTrigger>
+             
             </TabsList>
-
+            
             <TabsContent value="details" className="space-y-6">
               <Card>
                 <CardHeader>
@@ -197,31 +182,31 @@ const PropertyDetail = () => {
                 <CardContent className="prose max-w-none">
                   <h3>1. Parties</h3>
                   <p>
-                    This Residential Lease Agreement ("Agreement") is made between {contract.parties.landlord} ("Landlord")
-                    {contract.parties.tenant ? ` and ${contract.parties.tenant} ("Tenant")` : ""}.
+                    This Residential Lease Agreement ("Agreement") is made between {property.landlord.name} ("Landlord")
+                    {/* {property.parties.tenant ? ` and ${contract.parties.tenant} ("Tenant")` : ""}. */}
                   </p>
 
                   <h3>2. Property</h3>
                   <p>
                     Landlord hereby leases to Tenant, and Tenant hereby leases from Landlord, the residential property
-                    located at: {contract.address} ("Premises").
+                    located at: {property.address.street}, {property.address.city}, {property.address.state}, {property.address.zipcode} ("Premises").
                   </p>
 
                   <h3>3. Term</h3>
                   <p>
-                    The lease term will begin on {formatDate(contract.startDate)} and end on {formatDate(contract.endDate)}
+                    The lease term will begin on {formatDate(property.startDate)} and end on {formatDate(property.endDate)}
                     ("Lease Term").
                   </p>
 
                   <h3>4. Rent</h3>
                   <p>
-                    Tenant agrees to pay {formatCurrency(contract.monthlyRent)} per month as rent, due on the 1st day of each
+                    Tenant agrees to pay {formatCurrency(property.rentAmount)} per month as rent, due on the 1st day of each
                     month during the Lease Term.
                   </p>
 
                   <h3>5. Security Deposit</h3>
                   <p>
-                    Tenant will pay a security deposit of {formatCurrency(contract.monthlyRent)} to be held during the
+                    Tenant will pay a security deposit of {formatCurrency(property.rentAmount)} to be held during the
                     Lease Term.
                   </p>
 
@@ -246,15 +231,15 @@ const PropertyDetail = () => {
                   <div className="flex items-center justify-between pt-4">
                     <div className="space-y-2">
                       <div className="flex items-center">
-                        <span className="text-gray-500 mr-2">Contract ID:</span>
-                        <code className="text-xs bg-gray-100 p-1 rounded">{contract.id}</code>
+                        <span className="text-gray-500 mr-2">Property ID:</span>
+                        <code className="text-xs bg-gray-100 p-1 rounded">{property._id}</code>
                       </div>
                       <div className="flex items-center">
                         <span className="text-gray-500 mr-2">Blockchain Address:</span>
                         <code className="text-xs bg-gray-100 p-1 rounded">0x7c8f0671dD917789F9C0272D02f20c2b7AcD4F1F</code>
                       </div>
                     </div>
-                    {contract.status === "active" && (
+                    {property.isAvailable === false && (
                       <div className="flex items-center text-green-600">
                         <CheckCircle2 className="h-5 w-5 mr-2" />
                         <span>Verified on Blockchain</span>
@@ -287,7 +272,7 @@ const PropertyDetail = () => {
                       </div>
                     </div>
 
-                    {contract.status === "active" || contract.status === "expired" ? (
+                    {property.isAvailable === true || property.isAvailable === false ? (
                       <div className="mb-8">
                         <div className="absolute -left-3 mt-1.5">
                           <div className="h-6 w-6 rounded-full bg-green-100 flex items-center justify-center">
@@ -303,7 +288,7 @@ const PropertyDetail = () => {
                       </div>
                     ) : null}
 
-                    {contract.status === "active" || contract.status === "expired" ? (
+                    {property.isAvailable === true || property.isAvailable === false ? (
                       <div className="mb-8">
                         <div className="absolute -left-3 mt-1.5">
                           <div className="h-6 w-6 rounded-full bg-rentsure-100 flex items-center justify-center">
@@ -312,14 +297,14 @@ const PropertyDetail = () => {
                         </div>
                         <h3 className="text-lg font-semibold">Security Deposit Received</h3>
                         <time className="text-xs text-gray-500">April 20, 2024 at 9:12 AM</time>
-                        <p className="mt-1 text-gray-600">{formatCurrency(contract.monthlyRent)} security deposit paid</p>
+                        <p className="mt-1 text-gray-600">{formatCurrency(property.rentAmount)} security deposit paid</p>
                         <div className="mt-2 text-xs text-gray-500">
                           Tx: <code className="bg-gray-100 p-1 rounded">0x87f2b0681d40c013f19fcc3f18f6ea1c6f772ee721d0b346c0d6cdf822e3b1ec</code>
                         </div>
                       </div>
                     ) : null}
 
-                    {contract.status === "pending" && (
+                    {property.isAvailable === true && (
                       <div className="text-center py-6">
                         <Clock className="h-12 w-12 mx-auto text-gray-300 mb-3" />
                         <p className="text-gray-500">Waiting for all parties to sign the contract</p>

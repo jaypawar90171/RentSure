@@ -3,102 +3,63 @@ import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
 import {  PropertyCard } from "../components/property-card";
 import { Button } from "../components/ui/button";
-import { WalletConnect } from "../components/wallet-connect";
+// import { WalletConnect } from "../components/wallet-connect";
 import { Input } from "../components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "../components/ui/select";
 import { Plus, Search } from "lucide-react";
 import { Link } from "react-router-dom";
-
+import { useEffect } from "react";
+import axios from "axios";
 const PropertiesPage = () => {
-  const allProperties = [
-    {
-      id: "c1",
-      title: "Downtown Apartment",
-      address: "123 Main St, Apt 4B, New York, NY",
-      startDate: "2024-01-01",
-      endDate: "2024-12-31",
-      monthlyRent: 1250,
-      status: "active",
-      parties: {
-        landlord: "ABC Properties",
-        tenant: "John Smith",
-      },
-    },
-    {
-      id: "c2",
-      title: "Suburban House",
-      address: "456 Oak Lane, Chicago, IL",
-      startDate: "2024-03-15",
-      endDate: "2025-03-14",
-      monthlyRent: 1800,
-      status: "active",
-      parties: {
-        landlord: "ABC Properties",
-        tenant: "Maria Johnson",
-      },
-    },
-    {
-      id: "c3",
-      title: "Luxury Condo",
-      address: "789 Park Ave, San Francisco, CA",
-      startDate: "2024-05-01",
-      endDate: "2025-04-30",
-      monthlyRent: 2200,
-      status: "pending",
-      parties: {
-        landlord: "ABC Properties",
-      },
-    },
-    {
-      id: "c4",
-      title: "Studio Apartment",
-      address: "101 Pine St, Seattle, WA",
-      startDate: "2023-11-01",
-      endDate: "2024-10-31",
-      monthlyRent: 1100,
-      status: "active",
-      parties: {
-        landlord: "ABC Properties",
-        tenant: "David Wilson",
-      },
-    },
-    {
-      id: "c5",
-      title: "Beach House",
-      address: "555 Ocean Dr, Miami, FL",
-      startDate: "2023-12-15",
-      endDate: "2024-12-14",
-      monthlyRent: 3000,
-      status: "draft",
-      parties: {
-        landlord: "ABC Properties",
-      },
-    },
-    {
-      id: "c6",
-      title: "Mountain Cabin",
-      address: "777 Pine View, Denver, CO",
-      startDate: "2024-06-01",
-      endDate: "2025-05-31",
-      monthlyRent: 1600,
-      status: "expired",
-      parties: {
-        landlord: "ABC Properties",
-        tenant: "Sarah Miller",
-      },
-    },
-  ];
+  
+  const [Properties, setProperties] = useState([]);
+  const [allProperties, setAllProperties] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+
+
+  useEffect(() => {
+  const fetchProperties = async () => {
+    try {
+      console.log("Fetching properties...");
+      const response = await axios.get("http://localhost:5000/api/properties", {
+        headers: {
+          Authorization: `Bearer ${localStorage.getItem("token")}`,
+        },
+      });
+      console.log("Fetched properties:", response.data[0]);
+      setProperties(response.data);
+      setAllProperties(response.data);
+      setLoading(false);
+    } catch (err) {
+      console.error("Error fetching properties:", err);
+      setError("Failed to fetch properties. Please try again later.");
+      setLoading(false);
+    }
+  };
+  fetchProperties();
+} , []);
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const filteredProperties = allProperties.filter((contract) => {
-    const matchesSearch =
-      contract.title.toLowerCase().includes(searchTerm.toLowerCase()) ||
-      contract.address.toLowerCase().includes(searchTerm.toLowerCase());
-
-    const matchesStatus = statusFilter === "all" || contract.status === statusFilter;
-
+  const filteredProperties = allProperties.filter((property) => {
+    const searchLower = searchTerm.toLowerCase();
+    
+    const matchesSearch = (
+      (property.title?.toLowerCase().includes(searchLower)) ||
+      (property.description?.toLowerCase().includes(searchLower)) ||
+      (property.address?.street?.toLowerCase().includes(searchLower)) ||
+      (property.address?.city?.toLowerCase().includes(searchLower)) ||
+      (property.address?.state?.toLowerCase().includes(searchLower)) ||
+      (property.address?.zipCode?.toLowerCase().includes(searchLower)) ||
+      (property.price?.toString().includes(searchTerm)) ||  // Search as number string
+      (property.bedrooms?.toString().includes(searchTerm)) ||
+      (property.bathrooms?.toString().includes(searchTerm))
+    );
+  
+    const matchesStatus = statusFilter === "all" || property.status === statusFilter;
+  
     return matchesSearch && matchesStatus;
   });
 
@@ -120,7 +81,7 @@ const PropertiesPage = () => {
               <div className="flex-1 relative">
                 <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
                 <Input
-                  placeholder="Search contracts by title or address..."
+                  placeholder="Search properties by title, address, or city..."
                   className="pl-10"
                   value={searchTerm}
                   onChange={(e) => setSearchTerm(e.target.value)}
@@ -152,17 +113,17 @@ const PropertiesPage = () => {
                   ? "Try adjusting your search or filters"
                   : "You don't have any contracts yet"}
               </p>
-              <Link to="/create-contract">
-                <Button className="bg-rentsure-600 hover:bg-rentsure-700">
-                  <Plus className="mr-2 h-4 w-4" />
-                  Create Your First Contract
-                </Button>
-              </Link>
+              
             </div>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {filteredProperties.map((property) => (
-                <PropertyCard key={property._id} property={property} />
+                <Link to={`/properties/${property._id}`}
+                state={{ property }}
+                key={property._id}>
+
+                <PropertyCard  property={property} />
+                </Link>
               ))}
             </div>
           )}

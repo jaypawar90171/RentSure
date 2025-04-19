@@ -102,16 +102,6 @@
             "internalType": "string",
             "name": "tenantId",
             "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "date",
-            "type": "string"
-          },
-          {
-            "internalType": "string",
-            "name": "paymentReference",
-            "type": "string"
           }
         ],
         "internalType": "struct RentSure.Payment[]",
@@ -150,11 +140,6 @@
       {
         "internalType": "string",
         "name": "tenantId",
-        "type": "string"
-      },
-      {
-        "internalType": "string",
-        "name": "paymentReference",
         "type": "string"
       }
     ],

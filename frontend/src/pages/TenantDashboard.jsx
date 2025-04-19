@@ -1,4 +1,4 @@
-import React, { useEffect } from "react";
+import React, { useEffect, useState} from "react";
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
 import { TenantStats } from "../components/dashboard-stats";
@@ -16,18 +16,12 @@ import axios from "axios";
 
 
 const TenantDashboard = () => {
-  // const property = {
-  //   id: "t1",
-  //   name: "Downtown Apartment",
-  //   address: {street : "123 Main St, Apt 4B, New York, NY"},
-  //   startDate: "2024-01-01",
-  //   endDate: "2024-12-31",
-  //   rentAmount: 1300,
-  //   isAvailable: true,
-  //   landlord: { name: "ABC Properties" },
-  // };
-//   const [properties, setProperties] = React.useState([]);
-  const [property , setProperty] = React.useState({})
+ 
+  const [property , setProperty] = React.useState({});
+  const [dueDates, setDueDates] = useState([]);
+  const [timeRemaining, setTimeRemaining] = useState("");
+  const [transactions, setTransactions] = useState([]);
+
  useEffect(() => { 
      console.log("Fetching properties...");
      const fetchProperties = async () => {
@@ -35,6 +29,7 @@ const TenantDashboard = () => {
          const response = await axios.get("http://localhost:5000/api/properties");
         //  setProperties(response.data);
         const data = {
+          _id : response.data[0]._id,
           name: response.data[0].name,
           address: response.data[0].address,
           propertyType: response.data[0].propertyType,
@@ -52,20 +47,72 @@ const TenantDashboard = () => {
         // setProperty(data);
          console.log(response.data[0]);
          setProperty(response.data[0]);
+         // Calculate due dates
+        const calculatedDueDates = calculateDueDates(property.startDate, property.endDate);
+        setDueDates(calculatedDueDates);
+
+        // Calculate time remaining for the next due date
+        const remainingTime = calculateTimeRemaining(calculatedDueDates);
+        setTimeRemaining(remainingTime);
        } catch (error) {
          console.error("There was an error fetching the properties!", error);
        }
      };
- 
+
+     const fetchTransactions = async () => {
+      try {
+         await axios.get("http://localhost:5000/api/transactions" )
+            .then((res) => {setTransactions(res.data); 
+
+              console.log(res.data);
+            }
+          )
+            .catch((error) => console.error('Error' , error))
+          
+        // setTransactions(response.data);
+      } catch (error) {
+        console.error("There was an error fetching the properties!", error);
+      }
+    };
+
+
      fetchProperties();
+     fetchTransactions();
    } , []);
 
-  const payments = [
-    { id: 1, date: "Apr 1, 2024", amount: "$1,250.00", status: "Paid" },
-    { id: 2, date: "Mar 1, 2024", amount: "$1,250.00", status: "Paid" },
-    { id: 3, date: "Feb 1, 2024", amount: "$1,250.00", status: "Paid" },
-    { id: 4, date: "Jan 1, 2024", amount: "$1,250.00", status: "Paid" },
-  ];
+  // const payments = [
+  //   { id: 1, date: "Apr 1, 2024", amount: "$1,250.00", status: "Paid" },
+  //   { id: 2, date: "Mar 1, 2024", amount: "$1,250.00", status: "Paid" },
+  //   { id: 3, date: "Feb 1, 2024", amount: "$1,250.00", status: "Paid" },
+  //   { id: 4, date: "Jan 1, 2024", amount: "$1,250.00", status: "Paid" },
+  // ];
+  const calculateDueDates = (startDate, endDate) => {
+    const dueDates = [];
+    let currentDate = new Date(startDate);
+    currentDate.setDate(1); // Set to the 1st of the month
+    const end = new Date(endDate);
+
+    while (currentDate <= end) {
+      dueDates.push(new Date(currentDate));
+      currentDate.setMonth(currentDate.getMonth() + 1); // Move to the next month
+    }
+
+    return dueDates;
+  };
+
+  // Function to calculate time remaining for the next due date
+  const calculateTimeRemaining = (dueDates) => {
+    const today = new Date();
+    const nextDueDate = dueDates.find((date) => date >= today);
+
+    if (nextDueDate) {
+      const timeDiff = nextDueDate - today;
+      const daysRemaining = Math.ceil(timeDiff / (1000 * 60 * 60 * 24)); // Convert milliseconds to days
+      return `${daysRemaining} days`;
+    }
+
+    return "No upcoming due dates";
+  };
 
   return (
     <div className="min-h-screen flex flex-col">
@@ -107,25 +154,26 @@ const TenantDashboard = () => {
                 </CardHeader>
                 <CardContent>
                   <div className="space-y-4">
-                    <div className="flex justify-between items-center">
-                      <div>
-                        <div className="text-sm text-gray-500">Due Date</div>
-                        <div className="font-medium">May 1, 2024</div>
-                      </div>
-                      <div>
-                        <div className="text-sm text-gray-500">Amount</div>
-                        <div className="font-medium">$1,250.00</div>
-                      </div>
-                    </div>
-
-                    <div>
-                      <div className="flex justify-between text-sm mb-1">
-                        <span>Time Remaining</span>
-                        <span>15 days</span>
-                      </div>
-                      <Progress value={50} className="h-2" />
-                    </div>
-
+                                      {dueDates.map((dueDate, index) => (
+                                        <div key={index} className="flex justify-between items-center">
+                                          <div>
+                                            <div className="text-sm text-gray-500">Due Date</div>
+                                            <div className="font-medium">{dueDate.toLocaleDateString()}</div>
+                                          </div>
+                                          <div>
+                                            <div className="text-sm text-gray-500">Amount</div>
+                                            <div className="font-medium">${property.rentAmount}</div>
+                                          </div>
+                                        </div>
+                                      ))}
+                  
+                                      <div>
+                                        <div className="flex justify-between text-sm mb-1">
+                                          <span>Time Remaining</span>
+                                          <span>{timeRemaining}</span>
+                                        </div>
+                                        <Progress value={50} className="h-2" />
+                                      </div>
                     <GooglePayButton
             environment="TEST"
             buttonSizeMode="fill"
@@ -158,7 +206,7 @@ const TenantDashboard = () => {
               transactionInfo: {
                 totalPriceStatus: 'FINAL',
                 totalPriceLabel: 'Total',
-                totalPrice: property.rentAmount,
+                totalPrice: String(property.rentAmount),
                 currencyCode: 'INR',
                 countryCode: 'IN',
               },
@@ -170,7 +218,7 @@ const TenantDashboard = () => {
               // Prepare the request body
               const userId = JSON.parse(localStorage.getItem('userId'));
               const requestBody = {
-                propertyId: property.id,
+                propertyId: property._id,
                 amount: String(property.rentAmount),
                 tenantId: userId, 
                 status: 'paid',
@@ -180,32 +228,15 @@ const TenantDashboard = () => {
               axios.post('http://localhost:5000/api/orders', requestBody)
               .then(response => {
 
-                axios.post('http://localhost:5000/api/payments', {propertyId : property.id , amount : property.rentAmount , tenantId : userId} )
-                .then(res => { console.log(' Successfully saved to Blockchain', res.data); })  
-                .catch(err => { console.error('Error saving to Blockchain', err); });
+                // axios.post('http://localhost:5000/api/payments', {propertyId : property.id , amount : property.rentAmount , tenantId : userId} )
+                // .then(res => { console.log(' Successfully saved to Blockchain', res.data); })  
+                // .catch(err => { console.error('Error saving to Blockchain', err); });
                 console.log('Order processed successfully', response.data);
 
               })
               .catch(error => { console.error('Error processing order', error);});
 
-              // fetch(ordersEndpoint, {
-              //   method: 'POST',
-              //   headers: {
-              //     'Content-Type': 'application/json',
-              //   },
-              //   body: JSON.stringify(requestBody),
-              // })
-              //   .then(response => {
-              //     if (response.ok) {
-              //       console.log('Order processed successfully');
-              //       // navigate('/success', { state: { amount: demoProduct.price } }); // Pass the amount
-              //     } else {
-              //       console.error('Failed to process order');
-              //     }
-              //   })
-              //   .catch(error => {
-              //     console.error('Error processing order', error);
-              //   });
+             
             }}
 
             />
@@ -244,13 +275,14 @@ const TenantDashboard = () => {
                       </tr>
                     </thead>
                     <tbody>
-                      {payments.map((payment) => (
-                        <tr key={payment.id} className="border-b hover:bg-gray-50">
-                          <td className="py-3 px-4">{payment.date}</td>
-                          <td className="py-3 px-4">{payment.amount}</td>
+
+                      {transactions.map((transaction) => (
+                        <tr key={transaction._id} className="border-b hover:bg-gray-50">
+                          <td className="py-3 px-4">{transaction.date}</td>
+                          <td className="py-3 px-4">{transaction.amount}</td>
                           <td className="py-3 px-4">
                             <span className="bg-green-100 text-green-800 px-2 py-1 rounded-full text-xs font-medium">
-                              {payment.status}
+                              {transaction.status}
                             </span>
                           </td>
                           <td className="py-3 px-4 text-right">
@@ -260,7 +292,9 @@ const TenantDashboard = () => {
                           </td>
                         </tr>
                       ))}
+
                     </tbody>
+
                   </table>
                 </div>
                 <div className="mt-4 text-center">
