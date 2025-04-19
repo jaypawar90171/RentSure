@@ -1,9 +1,9 @@
-import React, { use } from "react";
+import React from "react";
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
 import { Button } from "../components/ui/button";
 import { LandlordStats } from "../components/dashboard-stats";
-import { ContractCard } from "../components/contract-card";
+import {  PropertyCard } from "../components/property-card";
 import { WalletConnect } from "../components/wallet-connect";
 import { Plus } from "lucide-react";
 import { Link } from "react-router-dom";
@@ -116,7 +116,7 @@ const LandlordDashboard = () => {
             </div>
             <div className="mt-4 md:mt-0 flex flex-col sm:flex-row space-y-2 sm:space-y-0 sm:space-x-2">
               {/* <WalletConnect /> */}
-              <Link to="/create-contract">
+              <Link to="/create-property">
                 <Button className="bg-rentsure-600 hover:bg-rentsure-700 mt-2 sm:mt-0">
                   <Plus className="mr-2 h-4 w-4" />
                   New Contract
@@ -130,10 +130,11 @@ const LandlordDashboard = () => {
           </div>
 
           <div className="mb-6">
-            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your Contracts</h2>
+            <h2 className="text-2xl font-semibold text-gray-900 mb-4">Your Properties</h2>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
               {properties.map((property) => (
-                <ContractCard key={property._id} contract={property} />
+                // <p> {property.propertyName}</p>
+                <PropertyCard key={property._id} property={property} />
               ))}
             </div>
           </div>

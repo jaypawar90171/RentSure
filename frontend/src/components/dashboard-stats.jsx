@@ -1,5 +1,6 @@
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { ArrowUpRight, Building, CalendarClock, DollarSign, FileCheck, UserCheck } from "lucide-react";
+import PropTypes from "prop-types";
 
 function StatCard({ title, value, description, icon, trend, trendUp }) {
   return (
@@ -33,13 +34,31 @@ export function LandlordStats() {
   );
 }
 
-export function TenantStats() {
+export function TenantStats({property}) {
   return (
     <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-      <StatCard title="Current Lease" value="Active" description="Smart contract in good standing" icon={<FileCheck className="h-4 w-4 text-rentsure-600" />} />
-      <StatCard title="Monthly Rent" value="$1,250" description="Due on the 1st of each month" icon={<DollarSign className="h-4 w-4 text-rentsure-600" />} />
-      <StatCard title="Lease Expiration" value="Oct 15, 2025" description="189 days remaining" icon={<CalendarClock className="h-4 w-4 text-rentsure-600" />} />
-      <StatCard title="Landlord" value="ABC Properties" description="Responsive within 24 hours" icon={<UserCheck className="h-4 w-4 text-rentsure-600" />} />
+      <StatCard title="Current Lease" value={property.depositAmount} description="Smart contract in good standing" icon={<FileCheck className="h-4 w-4 text-rentsure-600" />} />
+      <StatCard title="Monthly Rent" value={property.rentAmount} description="Due on the 1st of each month" icon={<DollarSign className="h-4 w-4 text-rentsure-600" />} />
+      <StatCard title="Lease Expiration" value={property.endDate} description="189 days remaining" icon={<CalendarClock className="h-4 w-4 text-rentsure-600" />} />
+      {/* <StatCard title="Landlord" value={property.landlord.email} description="Responsive within 24 hours" icon={<UserCheck className="h-4 w-4 text-rentsure-600" />} /> */}
     </div>
   );
 }
+
+
+TenantStats.propTypes = {
+  property: PropTypes.shape({
+    name: PropTypes.string.isRequired,
+    id: PropTypes.string.isRequired,
+    address: PropTypes.string.isRequired,
+    startDate: PropTypes.string.isRequired,
+    endDate: PropTypes.string.isRequired,
+    depositAmount : PropTypes.string.isRequired,
+    rentAmount: PropTypes.string.isRequired,
+    isAvailable: PropTypes.bool.isRequired,
+    landlord: PropTypes.shape({
+      // email: PropTypes.string.isRequired,
+      // tenant: PropTypes.string,
+    }).isRequired,
+  }).isRequired,
+};

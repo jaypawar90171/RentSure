@@ -2,7 +2,7 @@ import { OAuth2Client } from 'google-auth-library';
 import axios from 'axios';
 import jwt from 'jsonwebtoken';
 import { oauth2Client } from '../utils/googleConfig.js';
-import UserModel from '../models/userModel.js';
+import NewUserModel from '../models/NewUserModel.js';
 
 export const googleLogin = async (req, res) => {
     try {
@@ -24,9 +24,9 @@ export const googleLogin = async (req, res) => {
         const { email, name, picture } = userRes.data;
         console.log('Google User Info:', userRes.data);
 
-        let user = await UserModel.findOne({ email });
+        let user = await NewUserModel.findOne({ email });
         if (!user) {
-            user = new UserModel({
+            user = new NewUserModel({
                 name,
                 email,
                 image: picture,

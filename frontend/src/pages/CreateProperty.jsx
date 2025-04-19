@@ -1,15 +1,15 @@
 import React from "react";
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
-import { CreateContractForm } from "../components/create-contract-form";
+import { CreatePropertyForm } from "../components/create-property-form";
 
-const CreateContract = () => {
+const CreateProperty = () => {
   return (
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow bg-gray-50 py-12">
         <div className="container mx-auto px-6">
-          <CreateContractForm />
+          <CreatePropertyForm />
         </div>
       </main>
       <Footer />
@@ -17,4 +17,4 @@ const CreateContract = () => {
   );
 };
 
-export default CreateContract;
+export default CreateProperty;

@@ -1,8 +1,11 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback, useRef, Children, useContext } from 'react';
 import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
+import {MapLocationContext} from '../../context/mapContext'; // Adjust the import path as necessary
+
+
 
 const containerStyle = {
-  width: '155%',
+  width: '145%',
   height: '500px',
 };
 
@@ -21,7 +24,11 @@ function MapCom() {
   const [map, setMap] = useState(null);
   const [markerPosition, setMarkerPosition] = useState(defaultCenter);
   const searchInputRef = useRef(null);
-
+  const mapLocationContext = useContext(MapLocationContext);
+    
+  const {location, setLocation } = mapLocationContext; // Destructure setLocation from context
+  // const [location, setLocationState] = useState({ latitude: 0, longitude: 0 });
+  // setLocation({location}); // Set the initial location in context
   const onLoad = useCallback((map) => {
     setMap(map);
   }, []);
@@ -35,6 +42,9 @@ function MapCom() {
       lat: event.latLng.lat(),
       lng: event.latLng.lng(),
     };
+    setLocation({latitude: newPosition.lat, longitude: newPosition.lng});
+    console.log('Location:', location);
+    // setLocation(location);
     setMarkerPosition(newPosition);
     console.log('Selected Location (by map click):', newPosition);
   };
@@ -55,6 +65,8 @@ function MapCom() {
           lat: location.lat(),
           lng: location.lng(),
         };
+        setLocation({latitude: newPosition.lat, longitude: newPosition.lng});
+        // setLocation(location);
         setMarkerPosition(newPosition);
         map.panTo(location);
         console.log('Selected Location (by search):', newPosition);
@@ -65,6 +77,7 @@ function MapCom() {
   };
 
   return isLoaded ? (
+   
     <div>
       <div className="pb-4 flex items-center gap-2">
         <input
@@ -93,10 +106,16 @@ function MapCom() {
         </GoogleMap>
       </div>
     </div>
+   
   ) : (
     <div>Loading...</div>
+    
   );
+ 
+  
 }
+
+// export const useMapLocation = () => useContext(MapLocationContext);
 
 export default MapCom;
 

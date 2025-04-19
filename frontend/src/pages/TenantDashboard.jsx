@@ -1,8 +1,8 @@
-import React from "react";
+import React, { useEffect } from "react";
 import { Navbar } from "../components/navbar";
 import { Footer } from "../components/footer";
 import { TenantStats } from "../components/dashboard-stats";
-import { ContractCard } from "../components/contract-card";
+import { PropertyCard } from "../components/property-card";
 import { WalletConnect } from "../components/wallet-connect";
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { Progress } from "../components/ui/progress";
@@ -12,21 +12,53 @@ import { ArrowRight, Clock, DollarSign, FileText, MessageSquare, Wrench } from "
 import GooglePayButton from '@google-pay/button-react';
 import Listings from "./Listings";
 import { Link } from "react-router-dom";
+import axios from "axios";
+
 
 const TenantDashboard = () => {
-  const contract = {
-    id: "t1",
-    title: "Downtown Apartment",
-    address: "123 Main St, Apt 4B, New York, NY",
-    startDate: "2024-01-01",
-    endDate: "2024-12-31",
-    monthlyRent: 1250,
-    status: "active",
-    parties: {
-      landlord: "ABC Properties",
-      tenant: "Jane Smith",
-    },
-  };
+  // const property = {
+  //   id: "t1",
+  //   name: "Downtown Apartment",
+  //   address: {street : "123 Main St, Apt 4B, New York, NY"},
+  //   startDate: "2024-01-01",
+  //   endDate: "2024-12-31",
+  //   rentAmount: 1300,
+  //   isAvailable: true,
+  //   landlord: { name: "ABC Properties" },
+  // };
+//   const [properties, setProperties] = React.useState([]);
+  const [property , setProperty] = React.useState({})
+ useEffect(() => { 
+     console.log("Fetching properties...");
+     const fetchProperties = async () => {
+       try {
+         const response = await axios.get("http://localhost:5000/api/properties");
+        //  setProperties(response.data);
+        const data = {
+          name: response.data[0].name,
+          address: response.data[0].address,
+          propertyType: response.data[0].propertyType,
+          propertyArea: response.data[0].propertyArea,
+          noOfRooms: response.data[0].noOfRooms,
+          landlord: response.data[0].landlord,
+          startDate: response.data[0].startDate,
+          endDate: response.data[0].endDate,
+          rentAmount: response.data[0].rentAmount,
+          depositAmount: response.data[0].depositAmount,
+          image: response.data[0].image,
+          location : response.data[0].location,
+        }
+        console.log(data);
+        // setProperty(data);
+         console.log(response.data[0]);
+         setProperty(response.data[0]);
+       } catch (error) {
+         console.error("There was an error fetching the properties!", error);
+       }
+     };
+ 
+     fetchProperties();
+   } , []);
 
   const payments = [
     { id: 1, date: "Apr 1, 2024", amount: "$1,250.00", status: "Paid" },
@@ -47,15 +79,13 @@ const TenantDashboard = () => {
               <p className="text-gray-600 mt-1">Manage your lease and payments</p>
             </div>
             <div className="mt-4 md:mt-0">
-              <Link to="/listing" className="text-gray-600 hover:text-rentsure-600 transition-colors">
-              <button>New Listings</button>
-                          </Link>
+              
               
             </div>
           </div>
 
           <div className="mb-8">
-            <TenantStats />
+            {/* <TenantStats property={property} /> */}
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
@@ -65,7 +95,7 @@ const TenantDashboard = () => {
                   <CardTitle>Current Lease</CardTitle>
                 </CardHeader>
                 <CardContent>
-                  <ContractCard contract={contract} />
+                  <PropertyCard key={property._id} property={property} />
                 </CardContent>
               </Card>
             </div>
@@ -128,7 +158,7 @@ const TenantDashboard = () => {
               transactionInfo: {
                 totalPriceStatus: 'FINAL',
                 totalPriceLabel: 'Total',
-                totalPrice: contract.monthlyRent.toString(),
+                totalPrice: property.rentAmount,
                 currencyCode: 'INR',
                 countryCode: 'IN',
               },
@@ -136,36 +166,46 @@ const TenantDashboard = () => {
             onLoadPaymentData={paymentRequest => {
               console.log('load payment data', paymentRequest);
 
-              // Define the server endpoint
-              const ordersEndpoint = 'http://localhost:5000/api/orders';
-
+              // const amount = property.rentAmount;
               // Prepare the request body
+              const userId = JSON.parse(localStorage.getItem('userId'));
               const requestBody = {
-                amount: 100,
-                tenantId: 'X101', // Replace with your actual tenant ID
-                
-                // product: demoProduct,
+                propertyId: property.id,
+                amount: String(property.rentAmount),
+                tenantId: userId, 
+                status: 'paid',
               };
 
               // Send the payment data to the server
-              fetch(ordersEndpoint, {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify(requestBody),
+              axios.post('http://localhost:5000/api/orders', requestBody)
+              .then(response => {
+
+                axios.post('http://localhost:5000/api/payments', {propertyId : property.id , amount : property.rentAmount , tenantId : userId} )
+                .then(res => { console.log(' Successfully saved to Blockchain', res.data); })  
+                .catch(err => { console.error('Error saving to Blockchain', err); });
+                console.log('Order processed successfully', response.data);
+
               })
-                .then(response => {
-                  if (response.ok) {
-                    console.log('Order processed successfully');
-                    // navigate('/success', { state: { amount: demoProduct.price } }); // Pass the amount
-                  } else {
-                    console.error('Failed to process order');
-                  }
-                })
-                .catch(error => {
-                  console.error('Error processing order', error);
-                });
+              .catch(error => { console.error('Error processing order', error);});
+
+              // fetch(ordersEndpoint, {
+              //   method: 'POST',
+              //   headers: {
+              //     'Content-Type': 'application/json',
+              //   },
+              //   body: JSON.stringify(requestBody),
+              // })
+              //   .then(response => {
+              //     if (response.ok) {
+              //       console.log('Order processed successfully');
+              //       // navigate('/success', { state: { amount: demoProduct.price } }); // Pass the amount
+              //     } else {
+              //       console.error('Failed to process order');
+              //     }
+              //   })
+              //   .catch(error => {
+              //     console.error('Error processing order', error);
+              //   });
             }}
 
             />

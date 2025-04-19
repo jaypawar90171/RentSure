@@ -1,222 +1,585 @@
-import express from 'express';
-import mongoose from 'mongoose';
-import { google } from 'googleapis';
-import { ethers } from 'ethers';
-import cors from 'cors';
-import dotenv from 'dotenv';
-import authRouter from './routes/authRouter.js'; // Replace require with import
-import connect from './DB/db.js'; // Replace require with import
-
+import express from "express";
+import mongoose from "mongoose";
+import { google } from "googleapis";
+import { ethers } from "ethers";
+import cors from "cors";
+import dotenv from "dotenv";
+import authRouter from "./routes/authRouter.js"; // Replace require with importt
+import createDocsRoute from "./controllers/CreateDoc.js";
 dotenv.config();
+import crypto from "crypto";
+import bodyParser from "body-parser";
+import Payment from "./models/PaymentModel.js";
+import User from "./models/UserModel.js";
+import Landlord from "./models/LandlordModel.js";
+import Property from "./models/PropertyModel.js";
+import Tenant from "./models/TenantModel.js";
+
+import contractABI from "./RentSure.json" assert { type: "json" };
+
+import path from "path";
+import { fileURLToPath } from "url";
 
 const app = express();
 app.use(cors());
+app.use(bodyParser.json());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
 // MongoDB Connection
 // Uncomment the following line if you want to connect to MongoDB
 // connect();
-mongoose.connect(process.env.DB_URL || 'mongodb://localhost:27017/RentSure')
-  .then(() => console.log('Connected to MongoDB successfully!'))
-  .catch((err) => console.error('MongoDB connection error:', err));
-
-app.use('/auth', authRouter);
+mongoose
+  .connect(process.env.MONGO_URI)
+  .then(() => console.log("Connected to MongoDB"))
+  .catch((err) => console.error("MongoDB connection error:", err));
+app.use("/auth", authRouter);
 
 // Google Pay API Setup (Mocked for simplicity)
-const googlePay = {
-  verifyPayment: async (transactionId) => {
-    // Replace with actual Google Pay API call
-    return { status: 'SUCCESS', amount: 5000, transactionId };
-  },
-};
 
-// Google Docs API Setup
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
 const auth = new google.auth.GoogleAuth({
-  keyFile: './credentials.json', // Replace with your Google API credentials
-  scopes: ['https://www.googleapis.com/auth/documents'],
+  keyFile: "./service-account.json",
+  scopes: [
+    "https://www.googleapis.com/auth/documents",
+    "https://www.googleapis.com/auth/drive",
+  ],
 });
-const docs = google.docs({ version: 'v1', auth });
 
-// Ethereum Setup for Sepolia
-const provider = new ethers.JsonRpcProvider(
-  'https://sepolia.infura.io/v3/f16ab483c27145c29bff4a31842b2cf0'
-); // Use Sepolia RPC URL
-const wallet = new ethers.Wallet(
-  '4813c75d1f1775ebc0a7dde2a28eb79ea4b092829afb645ece60ab105577e853',
-  provider
-);
-const contractABI = [
-  {
-    inputs: [
-      { internalType: 'address', name: '_landlord', type: 'address' },
-      { internalType: 'address', name: '_tenant', type: 'address' },
-      { internalType: 'uint256', name: '_rentAmount', type: 'uint256' },
-      { internalType: 'uint256', name: '_leaseDuration', type: 'uint256' },
-    ],
-    stateMutability: 'nonpayable',
-    type: 'constructor',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: 'address', name: 'tenant', type: 'address' },
-      { indexed: false, internalType: 'uint256', name: 'amount', type: 'uint256' },
-      { indexed: false, internalType: 'uint256', name: 'timestamp', type: 'uint256' },
-    ],
-    name: 'PaymentReceived',
-    type: 'event',
-  },
-  {
-    anonymous: false,
-    inputs: [
-      { indexed: true, internalType: 'address', name: 'landlord', type: 'address' },
-      { indexed: false, internalType: 'uint256', name: 'amount', type: 'uint256' },
-      { indexed: false, internalType: 'uint256', name: 'timestamp', type: 'uint256' },
-    ],
-    name: 'PaymentReleased',
-    type: 'event',
-  },
-  {
-    inputs: [],
-    name: 'endLease',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'isActive',
-    outputs: [{ internalType: 'bool', name: '', type: 'bool' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'landlord',
-    outputs: [{ internalType: 'address', name: '', type: 'address' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'leaseEnd',
-    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'payRent',
-    outputs: [],
-    stateMutability: 'payable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'releasePayment',
-    outputs: [],
-    stateMutability: 'nonpayable',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'rentAmount',
-    outputs: [{ internalType: 'uint256', name: '', type: 'uint256' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-  {
-    inputs: [],
-    name: 'tenant',
-    outputs: [{ internalType: 'address', name: '', type: 'address' }],
-    stateMutability: 'view',
-    type: 'function',
-  },
-]; // Replace with your contract's ABI
-const contractAddress = '0x7E2789AD9C98E0655Ca335376b161bdE71Dbd4e9'; // Use the deployed contract address on Sepolia
-const contract = new ethers.Contract(contractAddress, contractABI, wallet);
+// // Google Docs API Setup
+// const auth = new google.auth.GoogleAuth({
 
-// MongoDB Schema
-const transactionSchema = new mongoose.Schema({
-  transactionId: { type: String, required: true },
-  tenantAddress: { type: String, required: true },
-  landlordAddress: { type: String, required: true },
-  amount: { type: Number, required: true },
-  timestamp: { type: Date, default: Date.now },
-  contractCid: { type: String },
-  status: { type: String, enum: ['PENDING', 'SUCCESS', 'FAILED'], default: 'PENDING' },
-});
-const Transaction = mongoose.model('Transaction', transactionSchema);
+//   keyFile: './service-account.json', // Replace with your Google API credentials
+//   scopes: ['https://www.googleapis.com/auth/documents'],
+// });
+const docs = google.docs({ version: "v1", auth });
 
-// API Endpoints
-app.post('/api/pay-rent', async (req, res) => {
-  const { transactionId, tenantAddress, landlordAddress } = req.body;
+// app.use("/api/docs", createDocsRoute);
 
+app.post("/api/docs/create", async (req, res) => {
+  console.log("Request body:", req.body); // Log the request body for debugging
   try {
-    // Verify Google Pay transaction
-    const payment = await googlePay.verifyPayment(transactionId);
-    if (payment.status !== 'SUCCESS') {
-      return res.status(400).json({ error: 'Payment verification failed' });
+    const {
+      propertyName,
+      address,
+      city,
+      state,
+      zip,
+      tenantEmail,
+      startDate,
+      endDate,
+      monthlyRent,
+      securityDeposit,
+      description,
+    } = req.body;
+
+    const authClient = await auth.getClient();
+    const docs = google.docs({ version: "v1", auth: authClient });
+    const drive = google.drive({ version: "v3", auth: authClient });
+
+    const title = `Rental Agreement - ${propertyName}`;
+    const formattedStartDate = new Date(startDate).toDateString();
+    const formattedEndDate = new Date(endDate).toDateString();
+
+    // Step 1: Check or create 'MyGeneratedDocs' folder
+    const folderQuery = await drive.files.list({
+      q: `mimeType='application/vnd.google-apps.folder' and name='MyGeneratedDocs' and trashed=false`,
+      fields: "files(id)",
+    });
+
+    let folderId = folderQuery.data.files[0]?.id;
+
+    if (!folderId) {
+      const folder = await drive.files.create({
+        resource: {
+          name: "MyGeneratedDocs",
+          mimeType: "application/vnd.google-apps.folder",
+        },
+        fields: "id",
+      });
+      folderId = folder.data.id;
     }
 
-    // Store transaction in MongoDB
-    const transaction = new Transaction({
-      transactionId,
-      tenantAddress,
-      landlordAddress,
-      amount: payment.amount,
-      status: 'SUCCESS',
-    });
-    await transaction.save();
-
-    // Trigger smart contract payment (assumes funds converted to ETH/stablecoin)
-    await contract.payRent({ value: ethers.parseEther((payment.amount / 100000).toString()) });
-
-    res.json({ message: 'Payment processed', transaction });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-});
-
-app.post('/api/create-agreement', async (req, res) => {
-  const { tenantName, landlordName, rentAmount, leaseDuration } = req.body;
-
-  if (!tenantName || !landlordName || !rentAmount || !leaseDuration) {
-    return res.status(400).json({ error: 'Missing required fields' });
-  }
-  console.log(tenantName, landlordName, rentAmount, leaseDuration);
-
-  try {
-    // Create Google Doc
-    const doc = await docs.documents.create({
-      requestBody: {
-        title: `Rental Agreement - ${tenantName}`,
+    // Step 2: Create document inside that folder
+    const docMeta = await drive.files.create({
+      resource: {
+        name: title,
+        mimeType: "application/vnd.google-apps.document",
+        parents: [folderId],
       },
+      fields: "id",
     });
 
-    // Update Doc with content
+    const documentId = docMeta.data.id;
+
+    // Step 3: Insert formatted content into the document
     await docs.documents.batchUpdate({
-      documentId: doc.data.documentId,
+      documentId,
       requestBody: {
         requests: [
           {
             insertText: {
               location: { index: 1 },
-              text: `Rental Agreement\nTenant: ${tenantName}\nLandlord: ${landlordName}\nRent: ${rentAmount}\nDuration: ${leaseDuration} days`,
+              text: `${title}\n\n`,
+            },
+          },
+          {
+            updateParagraphStyle: {
+              range: {
+                startIndex: 1,
+                endIndex: title.length + 1,
+              },
+              paragraphStyle: { namedStyleType: "TITLE" },
+              fields: "namedStyleType",
+            },
+          },
+          {
+            insertText: {
+              location: { index: title.length + 2 },
+              text:
+                `Date: ${new Date().toDateString()}\n\n` +
+                `Property Name: ${propertyName}\n` +
+                `Address: ${address}, ${city}, ${state} ${zip}\n\n` +
+                `Tenant Email: ${tenantEmail}\n` +
+                `Lease Period: ${formattedStartDate} to ${formattedEndDate}\n\n` +
+                `Monthly Rent: $${monthlyRent}\n` +
+                `Security Deposit: $${securityDeposit}\n\n` +
+                `Additional Terms:\n${description || "None"}\n\n\n` +
+                `Landlord Signature: ______________________\n\n` +
+                `Tenant Signature: ______________________`,
             },
           },
         ],
       },
     });
 
-    // Store doc link or upload to IPFS (mocked here)
-    const contractCid = `ipfs://mock-cid-${doc.data.documentId}`;
+    res.status(200).json({
+      message: "Document created successfully",
+      documentId,
+      url: `https://docs.google.com/document/d/${documentId}`,
+    });
+  } catch (error) {
+    console.error("Error creating document:", error);
+    res.status(500).json({ error: "Failed to create document" });
+  }
+});
 
-    res.json({ documentId: doc.data.documentId, contractCid });
+app.get("/generate-hash", async (req, res) => {
+  console.log("Hello from hash generation endpoint");
+  try {
+    const docs = google.docs({ version: "v1", auth });
+    const fileId = req.body.documentId; // Replace with your Google Doc ID
+
+    // Fetch document content using Google Docs API
+    const document = await docs.documents.get({
+      documentId: fileId,
+    });
+
+    // Extract plain text content
+    const content = document.data.body.content
+      .map((block) =>
+        block.paragraph?.elements?.map((el) => el.textRun?.content).join("")
+      )
+      .join("\n");
+
+    // Generate SHA-256 hash
+    const hash = crypto.createHash("sha256");
+    hash.update(content);
+    const hexHash = hash.digest("hex");
+    console.log("Hash generated:", hexHash);
+    res.json({ hash: hexHash });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
 });
 
-app.listen(3000, () => console.log('Server running on port 3000'));
+app.get("", async (req, res) => {
+  console.log("Hello");
+  res.status(201).json("hello");
+});
+
+app.post("/api/haveAccount", async (req, res) => {
+  console.log("Hello", req.body);
+  try {
+    const user = await User.find(req.body);
+    console.log("User found", user);
+    if (!user) {
+      return res.status(200).json({
+        haveAccount: false,
+        message: "User not found",
+        user: { email: req.body.email },
+      });
+    } else if (user.length === 0) {
+      return res.status(200).json({
+        haveAccount: false,
+        message: "User not found",
+        user: { email: req.body.email },
+      });
+    }
+
+    console.log("User found", user);
+    return res
+      .status(200)
+      .json({ haveAccount: true, message: "User found", user });
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+//  app.post('api/createUser', async (req, res) => {
+//   console.log("Hello")
+
+//   try {
+//     // const landlord = new Landlord( { req.body. } );
+//     const user = new User(req.body);
+//     await user.save();
+//       res.status(200).send({ message: 'User created' });
+
+//   } catch (error) {
+//     // console.error('Error processing payment:', error);
+//     res.status(500).send({ message: 'Internal server error', error });
+//   }
+//  });
+
+app.post("/api/orders", async (req, res) => {
+  const { amount, tenantId } = req.body;
+
+  try {
+    const payment = new Payment({
+      propertyId: req.body.propertyId,
+      tenantId: req.body.tenantId,
+      amount: req.body.amount,
+      status: req.body.status,
+    });
+    await payment.save();
+    res.status(200).send({ message: "Payment successful" });
+  } catch (error) {
+    console.error("Error processing payment:", error);
+    res.status(500).send({ message: "Internal server error" });
+  }
+});
+
+// // Create Landlord
+app.post("/api/landlords", async (req, res) => {
+  try {
+    // const landlord = new Landlord(req.body);
+    const landlord = new Landlord({
+      name: req.body.name,
+      phone: req.body.phone,
+      email: req.body.email,
+      upiDetails: req.body.upiDetails,
+    });
+    await landlord.save();
+    const user = new User({
+      email: req.body.email,
+      role: "landlord",
+      userId: landlord._id,
+    });
+    await user.save();
+    res.status(201).json(landlord);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// // Create Property for a Landlord
+app.post("/api/properties", async (req, res) => {
+  try {
+    // const property = new Property(req.body);
+    console.log("Properties", req.body);
+    const property = new Property({
+      name: req.body.propertyName,
+      address: req.body.address,
+      propertyType: req.body.propertyType,
+      propertyArea: req.body.propertyArea,
+      noOfRooms: req.body.noOfRooms,
+      landlord: req.body.landlord,
+      startDate: req.body.startDate,
+      endDate: req.body.endDate,
+      rentAmount: req.body.rentAmount,
+      depositAmount: req.body.depositAmount,
+      image: req.body.image,
+      location: req.body.location,
+    });
+    await property.save();
+
+    // Add property to landlord's properties array
+    console.log("Property", property._id);
+    await Landlord.findByIdAndUpdate(property.landlord, {
+      $push: { properties: property._id },
+    });
+
+    res.status(201).json(property);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get all Landlords with their properties populated
+app.get("/api/landlords", async (req, res) => {
+  try {
+    const landlords = await Landlord.find()
+      .populate("properties")
+      .sort({ createdAt: -1 });
+    res.json(landlords);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Get all Properties with landlord details
+app.get("/api/properties", async (req, res) => {
+  try {
+    const properties = await Property.find()
+      .populate("landlord", "email upiDetails")
+      .sort({ createdAt: -1 });
+    res.json(properties);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Update Rent Agreement for a Property
+app.put("/api/properties/:id/agreement", async (req, res) => {
+  try {
+    const updateFields = {};
+
+    // Construct update fields dynamically
+    for (const key in req.body) {
+      if (Object.keys(rentAgreementSchema.paths).includes(key)) {
+        updateFields[`rentAgreement.${key}`] = req.body[key];
+      }
+    }
+
+    const property = await Property.findByIdAndUpdate(
+      req.params.id,
+      { $set: updateFields },
+      { new: true, runValidators: true }
+    );
+
+    if (!property) {
+      return res.status(404).json({ error: "Property not found" });
+    }
+
+    res.json(property);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get Single Property with Agreement Details
+app.get("/api/properties/:id", async (req, res) => {
+  try {
+    const property = await Property.findById(req.params.id).populate(
+      "landlord",
+      "email upiDetails"
+    );
+
+    if (!property) {
+      return res.status(404).json({ error: "Property not found" });
+    }
+
+    res.json(property);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Create Tenant
+app.post("/api/tenants", async (req, res) => {
+  try {
+    // const tenant = new Tenant({req.body.email});
+    // const tenant = new Tenant(req.body);
+    const tenant = new Tenant({
+      name: req.body.name,
+      phone: req.body.phone,
+      email: req.body.email,
+      upiDetails: req.body.upiDetails,
+    });
+    await tenant.save();
+    const user = new User({
+      email: req.body.email,
+      role: "tenant",
+      userId: tenant._id,
+    });
+    await user.save();
+    res.status(201).json(tenant);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Get all Tenants with populated data
+app.get("/api/tenants", async (req, res) => {
+  try {
+    const tenants = await Tenant.find()
+      .populate({
+        path: "previousProperties.property",
+        select: "address description",
+      })
+      .populate({
+        path: "requestedProperties.property",
+        select: "address description isAvailable",
+      })
+      .sort({ createdAt: -1 });
+
+    res.json(tenants);
+  } catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+});
+
+// Handle property requests
+app.post("/api/tenants/:id/requests", async (req, res) => {
+  try {
+    const tenant = await Tenant.findByIdAndUpdate(
+      req.params.id,
+      { $push: { requestedProperties: req.body } },
+      { new: true, runValidators: true }
+    ).populate("requestedProperties.property");
+
+    if (!tenant) {
+      return res.status(404).json({ error: "Tenant not found" });
+    }
+
+    res.json(tenant);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// Update request status
+app.patch("/api/tenants/:tenantId/requests/:requestId", async (req, res) => {
+  try {
+    const tenant = await Tenant.findOneAndUpdate(
+      {
+        _id: req.params.tenantId,
+        "requestedProperties._id": req.params.requestId,
+      },
+      { $set: { "requestedProperties.$.status": req.body.status } },
+      { new: true }
+    ).populate("requestedProperties.property");
+
+    if (!tenant) {
+      return res.status(404).json({ error: "Tenant or request not found" });
+    }
+
+    res.json(tenant);
+  } catch (error) {
+    res.status(400).json({ error: error.message });
+  }
+});
+
+// /// BLockchain connectivity
+
+// // Initialize Ethereum provider
+const provider = new ethers.JsonRpcProvider(process.env.RPC_URL);
+const wallet = new ethers.Wallet(
+  process.env.SERVER_WALLET_PRIVATE_KEY,
+  provider
+);
+
+// // Load RentSure contract ABI (generated from Solidity compilation)
+
+const rentSureContract = new ethers.Contract(
+  process.env.CONTRACT_ADDRESS,
+  contractABI,
+  wallet
+);
+
+// // ========== API Endpoints ========== //
+
+// /**
+//  * 1. Store/Update Agreement Hash (Only Server can call)
+//  */
+app.post("/api/agreement", async (req, res) => {
+  try {
+    const { propertyId, documentHash } = req.body;
+
+    // Validate input
+    if (!propertyId || !documentHash) {
+      return res.status(400).json({ error: "Missing parameters" });
+    }
+
+    // Call smart contract
+    const tx = await rentSureContract.setAgreementHash(
+      propertyId,
+      ethers.keccak256(ethers.toUtf8Bytes(documentHash))
+    );
+
+    await tx.wait();
+    res.json({ success: true, txHash: tx.hash });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// /**
+//  * 2. Verify Agreement Hash
+//  */
+// app.get("/api/agreement/verify", async (req, res) => {
+//   try {
+//     const { propertyId, documentHash } = req.query;
+
+//     const isVerified = await rentSureContract.verifyAgreement(
+//       propertyId,
+//       ethers.keccak256(ethers.toUtf8Bytes(documentHash))
+//     );
+
+//     res.json({ verified: isVerified });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+// /**
+//  * 3. Record Payment (Only Server can call)
+//  */
+app.post("/api/payment", async (req, res) => {
+  try {
+    console.log(req.body);
+    const  data = { propertyId : req.body.propertyId, amount : req.body.amount, tenantId : req.body.tenantId, reference : '' } ;
+
+    const tx = await rentSureContract.recordPayment(
+      req.body.propertyId,
+      // ethers.parseEther(amount.toString()),
+      req.body.amount,
+      req.body.tenantId,
+      '',
+    );
+
+    await tx.wait();
+    res.json({ success: true, txHash: tx.hash });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+// /**
+//  * 4. Get Payment History
+//  */
+// app.get("/api/payment/:propertyId", async (req, res) => {
+//   try {
+//     const propertyId = req.params.propertyId;
+//     const paymentCount = await rentSureContract.getPaymentCount(propertyId);
+
+//     const payments = [];
+//     for (let i = 0; i < paymentCount; i++) {
+//       const payment = await rentSureContract.getPaymentDetails(propertyId, i);
+//       payments.push({
+//         amount: ethers.formatEther(payment.amount),
+//         timestamp: new Date(payment.timestamp * 1000),
+//         payer: payment.payer,
+//         reference: payment.paymentReference,
+//       });
+//     }
+
+//     res.json({ payments });
+//   } catch (error) {
+//     res.status(500).json({ error: error.message });
+//   }
+// });
+
+const PORT = process.env.PORT || 5000;
+app.listen(PORT, () => console.log("Server running on port 5000"));

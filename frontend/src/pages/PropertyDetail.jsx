@@ -11,7 +11,7 @@ import { Badge } from "../components/ui/badge";
 import { Separator } from "../components/ui/separator";
 import { toast } from "../components/ui/sonner";
 
-const ContractDetail = () => {
+const PropertyDetail = () => {
   const { id } = useParams();
   const [isSigning, setIsSigning] = useState(false);
 
@@ -337,4 +337,4 @@ const ContractDetail = () => {
   );
 };
 
-export default ContractDetail;
+export default PropertyDetail;

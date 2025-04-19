@@ -3,9 +3,9 @@ import { BrowserRouter, Routes, Route } from "react-router-dom";
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import Landing from './pages/Landing';
 import Home from './pages/Home';
-import ContractDetail from './pages/ContractDetail';
-import CreateContract from './pages/CreateContract';
-import ContractsPage from './pages/ContractsPage';
+// import ContractDetail from './pages/ContractDetail';
+import CreateProperty from './pages/CreateProperty';
+// import ContractsPage from './pages/PropertiesPage';
 import LandlordDashboard from './pages/LandlordDashboard';
 import TenantDashboard from './pages/TenantDashboard';
 import NotFound from './pages/NotFound';
@@ -14,14 +14,20 @@ import Listings from './pages/Listings';
 import RoleSelectionCard from './pages/RoleCard';
 import RegisterLandlord from './pages/RegisterLandlord';
 import RegisterTenant from './pages/RegisterTenant';
+import PropertyDetail from './pages/PropertyDetail';
+import PropertiesPage from './pages/PropertiesPage';
+
+import { MapLocationProvider } from './context/mapContext';
 const App = () => {
   return (
     <GoogleOAuthProvider clientId="580101834840-54o1tdjrahtaqp1fsldi9o45903th69t.apps.googleusercontent.com">
       <BrowserRouter>
+      <MapLocationProvider>
         <Routes>
-          <Route path='/contracts/:id' element={<ContractDetail />} />
-          <Route path='/create-contract' element={<CreateContract />} />
-          <Route path='/contracts' element={<ContractsPage />} />
+          
+          <Route path='/properties/:id' element={<PropertyDetail />} />
+          <Route path='/create-property' element={<CreateProperty />} />
+          <Route path='/properties' element={<PropertiesPage />} />
           <Route path='/' element={<Landing />} />
           <Route path='/landlord' element={<LandlordDashboard />} />
           <Route path='/tenant' element={<TenantDashboard />} />
@@ -32,6 +38,8 @@ const App = () => {
           <Route path='/register-tenant' element={<RegisterTenant />} />
           <Route path='*' element={<NotFound />} />
         </Routes>
+        </MapLocationProvider>
+
       </BrowserRouter>
     </GoogleOAuthProvider>
   );
