@@ -1,13 +1,15 @@
 {
-    "version": 2,
-    "builds": [
-      {
-        "src": "./server.js",
-        "use": "@vercel/node"
-      }
-    ],
-    "routes": [
-      { "src": "/(.*)", "dest": "/" }
-
-    ]
-  }
+  "version": 2,
+  "builds": [
+    {
+      "src": "server.js",    // Entry point to your Node.js app
+      "use": "@vercel/node"  // Uses Vercel's Node.js runtime
+    }
+  ],
+  "routes": [
+    {
+      "src": "/(.*)",        // Catch-all route
+      "dest": "server.js"    // Direct all requests to server.js
+    }
+  ]
+}
