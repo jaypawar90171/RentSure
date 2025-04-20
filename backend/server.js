@@ -38,6 +38,13 @@ mongoose
   .catch((err) => console.error("MongoDB connection error:", err));
 app.use("/auth", authRouter);
 
+app.get('/', (req, res) => {
+  res.json({
+    activeStatus: true,
+    error: false
+  });
+});
+
 // Google Pay API Setup (Mocked for simplicity)
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
