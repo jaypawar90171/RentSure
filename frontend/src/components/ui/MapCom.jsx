@@ -1,84 +1,92 @@
-import React, { useState, useCallback, useRef, Children, useContext } from 'react';
-import { GoogleMap, useJsApiLoader, Marker } from '@react-google-maps/api';
-import {MapLocationContext} from '../../context/mapContext'; // Adjust the import path as necessary
+"use client"
 
-
+import { useState, useCallback, useRef, useContext } from "react"
+import { GoogleMap, useJsApiLoader, Marker } from "@react-google-maps/api"
+import { MapLocationContext } from "../../context/mapContext" // Adjust the import path as necessary
 
 const containerStyle = {
-  width: '145%',
-  height: '500px',
-};
+  width: "145%",
+  height: "500px",
+}
 
 const defaultCenter = {
-  lat: -3.745,
-  lng: -38.523,
-};
+  lat: 16.742097,
+  lng: 74.382243,
+}
 
-function MapCom() {
+function MapComponent({ latitude, longitude }) {
   const { isLoaded } = useJsApiLoader({
-    id: 'google-map-script',
-    googleMapsApiKey: 'AIzaSyDg1yoMJgRyxUztn9cjDj_Or_jz4lFpmjk', // Use environment variable
-    libraries: ['places'], // Include the Places library
-  });
+    id: "google-map-script",
+    googleMapsApiKey: "AIzaSyDg1yoMJgRyxUztn9cjDj_Or_jz4lFpmjk", // Use environment variable
+    libraries: ["places"], // Include the Places library
+  })
 
-  const [map, setMap] = useState(null);
-  const [markerPosition, setMarkerPosition] = useState(defaultCenter);
-  const searchInputRef = useRef(null);
-  const mapLocationContext = useContext(MapLocationContext);
-    
-  const {location, setLocation } = mapLocationContext; // Destructure setLocation from context
-  // const [location, setLocationState] = useState({ latitude: 0, longitude: 0 });
-  // setLocation({location}); // Set the initial location in context
+  const [map, setMap] = useState(null)
+  const [markerPosition, setMarkerPosition] = useState(
+    latitude && longitude
+      ? {
+          lat: Number.parseFloat(latitude),
+          lng: Number.parseFloat(longitude),
+        }
+      : defaultCenter,
+  )
+  const searchInputRef = useRef(null)
+  const mapLocationContext = useContext(MapLocationContext)
+
+  const { setLocation } = mapLocationContext || {} // Destructure setLocation from context safely
+
   const onLoad = useCallback((map) => {
-    setMap(map);
-  }, []);
+    setMap(map)
+  }, [])
 
   const onUnmount = useCallback(() => {
-    setMap(null);
-  }, []);
+    setMap(null)
+  }, [])
 
   const handleMapClick = (event) => {
     const newPosition = {
       lat: event.latLng.lat(),
       lng: event.latLng.lng(),
-    };
-    setLocation({latitude: newPosition.lat, longitude: newPosition.lng});
-    console.log('Location:', location);
-    // setLocation(location);
-    setMarkerPosition(newPosition);
-    console.log('Selected Location (by map click):', newPosition);
-  };
+    }
+    if (setLocation) {
+      setLocation({ latitude: newPosition.lat, longitude: newPosition.lng })
+    }
+    setMarkerPosition(newPosition)
+    console.log("Selected Location (by map click):", newPosition)
+  }
 
   const handleSearch = () => {
-    const searchInput = searchInputRef.current.value.trim();
+    if (!searchInputRef.current) return
+
+    const searchInput = searchInputRef.current.value.trim()
     if (!searchInput) {
-      alert('Please enter a location to search.');
-      return;
+      alert("Please enter a location to search.")
+      return
     }
 
-    const geocoder = new window.google.maps.Geocoder();
+    const geocoder = new window.google.maps.Geocoder()
 
     geocoder.geocode({ address: searchInput }, (results, status) => {
-      if (status === 'OK' && results[0]) {
-        const location = results[0].geometry.location;
+      if (status === "OK" && results[0]) {
+        const location = results[0].geometry.location
         const newPosition = {
           lat: location.lat(),
           lng: location.lng(),
-        };
-        setLocation({latitude: newPosition.lat, longitude: newPosition.lng});
-        // setLocation(location);
-        setMarkerPosition(newPosition);
-        map.panTo(location);
-        console.log('Selected Location (by search):', newPosition);
+        }
+        if (setLocation) {
+          setLocation({ latitude: newPosition.lat, longitude: newPosition.lng })
+        }
+        setMarkerPosition(newPosition)
+        map.panTo(location)
+        console.log("Selected Location (by search):", newPosition)
       } else {
-        alert('Location not found! Please try again.');
+        alert("Location not found! Please try again.")
       }
-    });
-  };
+    })
+  }
 
   return isLoaded ? (
-   
-    <div>
+    <div className="map-container">
       <div className="pb-4 flex items-center gap-2">
         <input
           type="text"
@@ -97,7 +105,8 @@ function MapCom() {
         <GoogleMap
           mapContainerStyle={containerStyle}
           center={markerPosition}
-          zoom={10}
+          zoom={17}
+          mapTypeId="satellite"
           onLoad={onLoad}
           onUnmount={onUnmount}
           onClick={handleMapClick}
@@ -106,16 +115,14 @@ function MapCom() {
         </GoogleMap>
       </div>
     </div>
-   
   ) : (
-    <div>Loading...</div>
-    
-  );
- 
-  
+    <div className="flex items-center justify-center h-[500px] bg-gray-100 rounded-lg">
+      <div className="text-center">
+        <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-blue-500 mx-auto mb-4"></div>
+        <p className="text-gray-600">Loading map...</p>
+      </div>
+    </div>
+  )
 }
 
-// export const useMapLocation = () => useContext(MapLocationContext);
-
-export default MapCom;
-
+export default MapComponent

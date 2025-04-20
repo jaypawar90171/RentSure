@@ -13,13 +13,15 @@ import Payment from "./models/PaymentModel.js";
 import User from "./models/UserModel.js";
 import Landlord from "./models/LandlordModel.js";
 import RentOut from "./models/RentOutModel.js";
-
+import { GoogleGenerativeAI } from "@google/generative-ai";
 import Property from "./models/PropertyModel.js";
 import Tenant from "./models/TenantModel.js";
 import Signature from "./models/SingnatureModel.js";
 import contractABI from "./RentSure.json" assert { type: "json" };
+import Maintenance from "./models/MaintenanceSchema.js";
 import path from "path";
 import { fileURLToPath } from "url";
+const API_KEY = process.env.GEMINI_API_KEY;
 
 const app = express();
 app.use(cors());
@@ -190,8 +192,9 @@ app.post("/generate-hash", async (req, res) => {
     const hexHash = hash.digest("hex");
     console.log("Hash generated:", hexHash);
 
-    Property.findByIdAndUpdate( req.body.propertyId , { documentHash: hexHash });
-    res.json({ hash: hexHash });
+    await Property.findByIdAndUpdate( req.body.propertyId , { documentHash: hexHash });
+    console.log("Hash Added to property")
+    res.status(200).json({ hash: hexHash });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -203,33 +206,75 @@ app.get("", async (req, res) => {
 });
 
 
+app.get("/api/maintenance/:userId", async (req, res) => {
+
+  try {
+    const maintenance = await Maintenance.find( { landlordId :req.params.userId });
+    res.status(200).json( maintenance );
+  }catch(error) {
+      res.status(400).json({ error: error.message });
+    }
+
+
+});
+
+app.post("/api/maintenance", async (req, res) => {
+  try {
+
+    const maintenance = new Maintenance.create({title : req.body.title , description : req.body.description , propertyId : req.body.propertyId , tenantId : req.body.tenantId }); 
+    await maintenance.save();
+
+    res.status(200).json("Hello form saved successfully", maintenance);
+  }catch(error) {
+      res.status(400).json({ error: error.message });
+    }
+})
+
+
 app.post("/api/rentOut", async (req, res) => {
   try {
     // res.status(200).json("Hello from RentOut endpoint");
+    console.log("Hello from RentOut endpoint", req.body); // Log the request body for debugging
     const rentOut = new RentOut({
       propertyId: req.body.propertyId,
       tenantId: req.body.tenantId,
       // landlordId: req.body.landlordId,
     });
     await rentOut.save();
-    res.status(201).json(rentOut);
 
-    Property.findByIdAndUpdate(
+    await Property.findByIdAndUpdate(
       req.body.propertyId,
       { isAvailable: false },
-     
     );
+
+    console.log("Property updated to unavailable");
+    res.status(200).json("Property updated to unavailable");
   } catch (error) {
     res.status(400).json({ error: error.message });
   }
  })
 
-
- app.post("/api/getPropertyByTenant", async (req, res) => { 
+ app.post("/api/propertiesByLandlord", async (req, res) => { 
+  console.log("Hello from getPropertyBylandlord endpoint", req.body); // Log the request body for debugging
   try {
-    const property = await RentOut.find({ tenantId: req.body.tenantId })
+    console.log("User ID", req.body.userId);
+    const landlord = await Landlord.findById(req.body.userId);
+
+    console.log(landlord)
+      res.status(200).json(landlord.properties);
+  }catch (error) {  console.error("Error fetching property by tenant:", error);
+    res.status(500).json({ error: "Server error" });
+ } });
+
+
+ app.post("/api/getPropertyByTenantId", async (req, res) => { 
+  console.log("Hello from getPropertyByTenant endpoint", req.body); // Log the request body for debugging
+  try {
+    const rentOut = await RentOut.find({ tenantId: req.body.tenantId })
       .populate("propertyId");
 
+      const property = await Property.findById(rentOut[0].propertyId);
+      console.log("Property", property);
       res.status(200).json(property);
   }catch (error) {  console.error("Error fetching property by tenant:", error);
     res.status(500).json({ error: "Server error" });
@@ -279,8 +324,7 @@ app.post("/api/haveAccount", async (req, res) => {
 //  });
 
 app.post("/api/payRent", async (req, res) => {
-  const { amount, tenantId } = req.body;
-
+ 
   try {
     
     const payment = new Payment({
@@ -289,8 +333,8 @@ app.post("/api/payRent", async (req, res) => {
       amount: req.body.amount,
       status: req.body.status,
     });
-
-    console.log(payment)
+    console.log("Hello")
+    console.log("Payment" , payment)
     await payment.save();
     res.status(200).send({ message: "Payment successful" });
   } catch (error) {
@@ -350,6 +394,20 @@ app.get("/api/transactions" , async (req , res) => {
     console.log("Transactions", transactions);
   
     res.json(transactions);
+  }catch (error) {
+    res.status(500).json({ error: "Server error" });
+  }
+ 
+}) 
+
+
+app.get("/api/transactions/:propertyId/:userId" , async (req , res) => { 
+  console.log("Hello from transactions endpoint", req.params); // Log the request body for debugging
+  try{
+    const transactions = await Payment.find({  propertyId : req.params.propertyId, tenantId : req.params.userId });
+    // console.log("Transactions", transactions); 
+    
+    res.status(200).json(transactions);
   }catch (error) {
     res.status(500).json({ error: "Server error" });
   }
@@ -580,7 +638,8 @@ const rentSureContract = new ethers.Contract(
 app.post("/api/agreement", async (req, res) => {
   try {
     const { propertyId, documentHash } = req.body;
-
+    console.log("Property ID", propertyId);
+    console.log("Document Hash", documentHash);
     // Validate input
     if (!propertyId || !documentHash) {
       return res.status(400).json({ error: "Missing parameters" });
@@ -703,7 +762,98 @@ app.get('/api/signatures', (req, res) => {
 
 
 
+//gemini
+const genAI = new GoogleGenerativeAI(API_KEY);
+const systemInstruction = `
+You are RentSure Assistant, an expert in Indian rental regulations. You exclusively:
+- Provide information about rental agreements and lease terms under Indian law
+- Explain tenant rights and landlord obligations as per Indian regulations
+- Clarify rental documentation requirements specific to Indian states
+- Reference relevant Indian laws (Rent Control Act, state-specific regulations)
+- Offer neutral, factual information without legal counsel
+- Politely decline to answer non-rental related queries
 
+*Examples:*
+
+<example>
+*User:* What's the maximum security deposit allowed in Maharashtra?
+*Response:*  
+\\\`json
+{
+    "text": "In Maharashtra, the security deposit is typically limited to:
+    - 3 months' rent for residential properties
+    - 6 months' rent for commercial properties
+    As per the Maharashtra Rent Control Act 1999. Always verify current limits as regulations may update."
+}
+\\\`
+</example>
+
+<example>
+*User:* How to terminate a rental agreement early?
+*Response:*  
+\\\`json
+{
+    "text": "Early termination in India typically requires:
+    1. Mutual consent between tenant and landlord
+    2. Notice period as per agreement (usually 1-2 months)
+    3. Valid reasons per agreement clauses
+    Review your specific rental agreement and consult the Transfer of Property Act 1882 Section 106."
+}
+\\\`
+</example>
+
+<example>
+*User:* Tell me about stock markets
+*Response:*  
+\\\`json
+{
+    "text": "I specialize in Indian rental matters. For financial advice, please consult a certified financial expert."
+}
+\\\`
+</example>
+
+*IMPORTANT:* 
+- Cite specific Indian laws/acts when possible
+- Highlight regional variations between states
+- Never provide legal advice - recommend consulting legal professionals
+- Maintain neutral, professional tone
+`;
+
+const model = genAI.getGenerativeModel({
+  model: "gemini-1.5-flash",
+  generationConfig: {
+    temperature: 0.4
+  }
+});
+
+app.post('/api/generate', async (req, res) => {
+  console.log("Received request body:", req.body); // Log incoming request
+
+  // 1. Get the prompt from the request body
+  const { prompt } = req.body;
+
+  if (!prompt) {
+    return res.status(400).json({ error: 'Prompt is required in the request body' });
+  }
+
+  try {
+    // 2. Call the Gemini API
+    console.log(`Sending prompt to Gemini: "${prompt}"`);
+    const result = await model.generateContent(prompt);
+    const response = await result.response;
+    const text = response.text();
+
+    console.log("Received response from Gemini:", text);
+
+    // 3. Send the response back to the React frontend
+    res.json({ response: text });
+
+  } catch (error) {
+    console.error("Error calling Gemini API:", error);
+    // Provide a more generic error message to the client
+    res.status(500).json({ error: 'Failed to generate content from Gemini API' });
+  }
+});
 
 
 

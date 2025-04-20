@@ -8,7 +8,7 @@ import { useNavigate } from "react-router-dom";
 export function PropertyCard({ property }) {
 
   const navigate = useNavigate();
-
+  
   const statusColors = {
     draft: "bg-gray-200 text-gray-800",
     pending: "bg-yellow-200 text-yellow-800",
@@ -48,7 +48,7 @@ export function PropertyCard({ property }) {
           <div className="flex items-start space-x-2">
             <Home className="h-4 w-4 text-gray-500 mt-0.5" />
             <span className="text-gray-700">
-              {property.address?.street || "Address not available"}
+             {property.address?.street || "Address not available"}
             </span>
           </div>
 
@@ -72,7 +72,7 @@ export function PropertyCard({ property }) {
         <Button
           variant="outline"
           className="w-full text-rentsure-600 border-rentsure-300 hover:bg-rentsure-50"
-          onClick={() => navigate(`/properties/${property.id}`)}
+          onClick={() => navigate(`/properties/${property._id}`)}
         >
           <FileText className="mr-2 h-4 w-4" />
           View Contract

@@ -16,6 +16,7 @@ import RegisterLandlord from './pages/RegisterLandlord';
 import RegisterTenant from './pages/RegisterTenant';
 import PropertyDetail from './pages/PropertyDetail';
 import PropertiesPage from './pages/PropertiesPage';
+import Gemini from './pages/Gemini';
 
 import { MapLocationProvider } from './context/mapContext';
 const App = () => {
@@ -36,6 +37,7 @@ const App = () => {
           <Route path='/roleCard' element={<RoleSelectionCard />} />
           <Route path='/register-landlord' element={<RegisterLandlord />} />
           <Route path='/register-tenant' element={<RegisterTenant />} />
+          <Route path='/gemini' element={<Gemini/>} />
           <Route path='*' element={<NotFound />} />
         </Routes>
         </MapLocationProvider>

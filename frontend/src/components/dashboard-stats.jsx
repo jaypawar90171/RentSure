@@ -1,3 +1,4 @@
+
 import { Card, CardContent, CardHeader, CardTitle } from "../components/ui/card";
 import { ArrowUpRight, Building, CalendarClock, DollarSign, FileCheck, UserCheck } from "lucide-react";
 import PropTypes from "prop-types";

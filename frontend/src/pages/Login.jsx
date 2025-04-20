@@ -36,12 +36,12 @@ const Login = () => {
           console.log(response.data);
           if (response.data.haveAccount) {
             localStorage.setItem("userId", JSON.stringify(response.data.user[0].userId))
-            if(response.data.user.role === "landlord") { 
+            if(response.data.user[0].role === "landlord") { 
               navigate("/landlord")
             }else{
               navigate("/tenant")
             }
-
+            console.log("User ID:", response.data.user[0].role)
             console.log(response.data.user[0].userId)
           } else {
             navigate("/roleCard")

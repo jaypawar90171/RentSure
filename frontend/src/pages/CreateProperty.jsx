@@ -1,10 +1,11 @@
 import React from "react";
-import { Navbar } from "../components/navbar";
-import { Footer } from "../components/footer";
+import Navbar  from "../components/navbar";
+import  Footer  from "../components/footer";
 import { CreatePropertyForm } from "../components/create-property-form";
-
+import PageTransition from "./PageTransition";
 const CreateProperty = () => {
   return (
+    <PageTransition>
     <div className="min-h-screen flex flex-col">
       <Navbar />
       <main className="flex-grow bg-gray-50 py-12">
@@ -14,6 +15,7 @@ const CreateProperty = () => {
       </main>
       <Footer />
     </div>
+    </PageTransition>
   );
 };
 
