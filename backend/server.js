@@ -43,7 +43,7 @@ app.use("/auth", authRouter);
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 const auth = new google.auth.GoogleAuth({
-  keyFile: "./service-account.json",
+  keyFile: process.env.SERVICE_ACCOUNT,
   scopes: [
     "https://www.googleapis.com/auth/documents",
     "https://www.googleapis.com/auth/drive",
